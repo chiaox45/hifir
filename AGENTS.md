@@ -73,6 +73,22 @@ examples/
 docs/                    ← Doxygen config + doc sources
 ```
 
+### Design Documentation
+
+Detailed design documents live in `docs/designs/` and cover theory, architecture,
+algorithms, and module internals. **Read these before making non-trivial changes.**
+
+| Document | Path | Covers |
+|----------|------|--------|
+| **Overall** | `docs/designs/design.md` | Theory (AGI, optimal preconditioning), architecture overview, factorization/solve/HIFIR workflows, key design decisions |
+| **Data Structures** | `docs/designs/ds/design.md` | Array hierarchy, CRS/CCS, AugmentedStorage, DenseMatrix, PermMatrix, SparseVector |
+| **Algorithms** | `docs/designs/alg/design.md` | Crout ILU (3 variants), dual dropping, Schur complement, Prec storage, multilevel solve, iterative refinement |
+| **Preprocessing** | `docs/designs/pre/design.md` | MC64 equilibration, scaling pipeline, AMD/RCM reordering, symmetric vs asymmetric paths |
+| **Dense LA** | `docs/designs/small_scale/design.md` | LAPACK layered architecture, LUP/QRCP/SYEIG solvers, rank-revealing strategies |
+| **Utilities** | `docs/designs/utils/design.md` | Logging macros, ValueTypeTrait/Const type system, math, I/O, OpenMP threading, Timer |
+
+Reference paper: [arXiv:2106.09877](https://arxiv.org/abs/2106.09877) — "HIFIR: Hybrid Incomplete Factorization with Iterative Refinement" by X. Liu and J. Chen.
+
 ### Key Design Decisions
 - **Header-only C++**: `src/` requires no compilation; just `#include "hifir.hpp"`.
 - **C++11 standard** enforced via `-std=c++11`; no C++14/17/20 features.
