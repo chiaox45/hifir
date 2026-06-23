@@ -26,6 +26,14 @@ dual-licensing.
   cd tests && make DEBUG=2 && cd ..
   cd examples && make DEBUG=2 runall
   ```
+- **Memory check**: `valgrind ./tests/<test>.exe` after building a test
+
+### Writing Tests
+- Test files live in `tests/` as `test_*.cpp` (34 tests, GTest-based).
+- **Must** `#include "common.hpp"` before any other `hif*.hpp` header.
+- Build and run a single test: `make -C tests test_foo` → produces `tests/test_foo.exe`.
+- Dependencies are auto-extracted by the Makefile; no manual target registration needed.
+- See `tests/README.md` for full conventions.
 
 ### Lint/Format
 - **Check formatting**: `clang-format --dry-run --Werror --style=file <file>`
