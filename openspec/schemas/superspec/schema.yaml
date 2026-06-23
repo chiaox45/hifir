@@ -1,0 +1,668 @@
+name: superspec
+version: 1
+description: >
+  End-to-end SDD workflow combining OpenSpec governance,
+  Superpowers execution discipline, and OmO multi-model orchestration.
+  All artifacts live under openspec/ — no output to docs/superpowers/ or .sisyphus/.
+  Requirements: Superpowers plugin installed (brainstorming, writing-plans,
+  using-git-worktrees, subagent-driven-development, finishing-a-development-branch).
+  OmO multi-model platform required (Metis, Momus, Explore, Librarian, Oracle).
+  Each artifact verifies required skills before invoking (PRECHECK pattern).
+  discover → proposal → specs → tasks → plan → [apply] → verify → retrospective.
+  design is required (parallel to proposal, both from discover; referenced by tasks/specs).
+  Apply phase uses git worktrees + subagent-driven-development.
+
+artifacts:
+  # ═══════════════════════════════════════════════════
+  # Phase 1: Discovery & Design
+  # ═══════════════════════════════════════════════════
+  - id: discover
+    generates: discover.md
+    description: Requirements discovery via explore/librarian codebase exploration + brainstorming + metis review
+    template: discover.md
+    requires: []
+    instruction: |
+      PRECHECK — required skill and agent availability:
+      1. Confirm `superpowers:brainstorming` appears in your available skills list.
+         If missing, STOP and inform the user that the Superpowers plugin must be
+         installed. Brainstorming is mandatory — do NOT offer manual authoring as
+         an alternative and do NOT silently fall back.
+      2. Confirm OmO metis agent (type) is available. If unavailable, STOP —
+         metis review is mandatory and cannot be skipped.
+
+      ## Execution
+
+      Step 1: Explore codebase with OmO Explore/Librarian agents.
+        - Use Explore agent (type) for codebase scans (file structure, dependencies,
+          existing patterns, related code).
+        - Use Librarian agent (type) for documentation and external pattern retrieval.
+        - Research findings are written to discover.md as the foundation for
+          subsequent steps.
+        - Do NOT write to .sisyphus/ or docs/superpowers/.
+
+      Step 2: After codebase exploration, invoke superpowers:brainstorming.
+        - Use the Skill tool to invoke **superpowers:brainstorming**.
+        - Brainstorming output appends to this file (discover.md).
+        - Do NOT write to docs/superpowers/specs/.
+        - The brainstorming skill will:
+          1. Explore project context (informed by Step 1 findings)
+          2. Ask clarifying questions (one at a time)
+          3. Propose 2-3 approaches with trade-offs
+          4. Present design sections for approval
+          5. Output the validated design
+
+      Step 3: MUST invoke OmO metis agent (type) for requirements review and gap analysis.
+        - Do NOT skip even if requirements appear clear or straightforward.
+        - Metis reviews the codebase exploration (Step 1) and brainstorming
+          (Step 2) output to identify ambiguities, missing requirements, and gaps.
+        - Metis conducts iterative Q&A to converge on requirements.
+        - Metis output appends to discover.md as the final review section.
+        - ⚡ Pass relevant already-completed Explore/Librarian results to Metis
+          as context — re-running them is time-consuming and unnecessary.
+        - Do NOT write to .sisyphus/plans/ or any .sisyphus/ subdirectory.
+
+      ## Output Redirection Rules
+      - ❌ NO output to docs/superpowers/specs/
+      - ❌ NO output to .sisyphus/
+      - ✅ ALL output to openspec/changes/<change-name>/discover.md
+
+  - id: proposal
+    generates: proposal.md
+    description: Concise why/what extraction from discovery
+    template: proposal.md
+    requires:
+      - discover
+    instruction: |
+      Create the proposal document based on discover.md.
+
+      Read discover.md for the validated requirements and brainstorming output.
+      Extract the following sections:
+
+      - **Why** (50-1000 chars, validated by OpenSpec): The motivation for this
+        change, distilled from the codebase analysis, brainstorming discussion,
+        and metis review.
+      - **What Changes**: Specific changes agreed upon, using From/To format for
+        behavior changes.
+      - **Capabilities**: Identify which specs will be created or modified:
+        - **New Capabilities**: List capabilities being introduced. Each becomes a
+          new `specs/<name>/spec.md`. Use kebab-case names.
+        - **Modified Capabilities**: List existing capabilities whose REQUIREMENTS
+          are changing. Check `openspec/specs/` for existing spec names.
+      - **Impact**: Affected code, APIs, dependencies, or systems.
+
+      IMPORTANT: The Capabilities section is critical. It creates the contract
+      between proposal and specs phases. Each capability listed here will need a
+      spec file. Use exact kebab-case names that will become directory names under
+      specs/.
+
+      Since discovery already explored the problem space via metis and
+      brainstorming, this should be a concise extraction, not a new exploration.
+      Keep it concise (1-2 pages). Focus on the "why" not the "how".
+
+  - id: design
+    generates: design.md
+    description: Technical design with decisions, trade-offs, and migration plan
+    template: design.md
+    requires:
+      - discover
+    instruction: |
+      Create the design document explaining HOW to implement the change.
+
+      Read discover.md as input. discover.md contains the codebase exploration
+      findings, brainstorming results, and metis review output. Your job
+      is to REORGANIZE that content into the structured sections below.
+
+      This is a transformation, not a copy. Extract and restructure:
+      - Decisions from brainstorming → design.md Decisions section
+      - Background/context → design.md Context section
+      - Trade-offs → design.md Risks / Trade-offs section
+      - Add Goals/Non-Goals and Migration Plan (may require inference from
+        discover.md content)
+
+      PRECONSULT: MUST invoke OmO metis agent (type) before writing design.md.
+      Do NOT skip even if the design approach appears clear or straightforward.
+      Metis identifies ambiguities, hidden assumptions, missing considerations,
+      and structural issues. Include metis output as an appendix to design.md.
+      ⚡ Pass relevant already-completed Explore/Librarian results to Metis
+      as context — re-running them is time-consuming and unnecessary.
+
+      MUST consult OmO oracle agent (type) for architecture decisions. Oracle
+      provides deep reasoning on cross-system boundaries, data consistency
+      models, and irreversible technical choices.
+
+      Sections:
+      - **Context**: Background, current state, constraints, stakeholders.
+      - **Goals / Non-Goals**: What this design achieves and explicitly excludes.
+      - **Decisions**: Key technical choices numbered D1, D2, etc. Each decision
+        includes rationale (why X over Y?) and alternatives considered.
+      - **Risks / Trade-offs**: Known limitations, things that could go wrong.
+        Format: [Risk] → Mitigation.
+      - **Migration Plan**: Steps to deploy, rollback strategy (if applicable).
+      - **Open Questions**: Outstanding decisions or unknowns to resolve.
+
+      Focus on architecture and approach, not line-by-line implementation.
+      Good design docs explain the "why" behind technical decisions.
+
+  # ═══════════════════════════════════════════════════
+  # Phase 2: Specification & Planning
+  # ═══════════════════════════════════════════════════
+  - id: specs
+    generates: "specs/**/*.md"
+    description: Delta capability specifications in BDD format
+    template: spec.md
+    requires:
+      - proposal
+      - design
+    instruction: |
+      PRECONSULT: MUST invoke OmO metis agent (type) before writing specs.
+      Do NOT skip even if the specification approach appears clear or straightforward.
+      Metis identifies requirement gaps, ambiguity in scenarios, and missing edge
+      cases. Address all metis findings before proceeding.
+      ⚡ Pass relevant already-completed Explore/Librarian results to Metis
+      as context — re-running them is time-consuming and unnecessary.
+
+      Create specification files that define WHAT the system should do.
+
+      Create one spec file per capability listed in the proposal's Capabilities
+      section:
+      - New capabilities: use the exact kebab-case name from the proposal
+        (specs/<capability>/spec.md).
+      - Modified capabilities: use the existing spec folder name from
+        openspec/specs/<capability>/ when creating the delta spec at
+        specs/<capability>/spec.md.
+
+      Delta operations (use ## headers):
+      - **ADDED Requirements**: New capabilities or new requirements within
+        existing capabilities.
+      - **MODIFIED Requirements**: Changed behavior — MUST include full updated
+        content (not just the diff).
+      - **REMOVED Requirements**: Deprecated features — MUST include **Reason**
+        and **Migration** subsections.
+      - **RENAMED Requirements**: Name changes only — use FROM:/TO: format.
+
+      Format requirements:
+      - Each requirement: `### Requirement: <name>` followed by description.
+      - Use SHALL/MUST for normative requirements (avoid should/may).
+      - Every requirement MUST contain SHALL or MUST.
+      - Each scenario: `#### Scenario: <name>` with BDD format:
+        - GIVEN (precondition)
+        - WHEN (action)
+        - THEN (expected result)
+      - **CRITICAL**: Scenarios MUST use exactly 4 hashtags (`####`). Using 3
+        hashtags or bullets will fail silently in OpenSpec validation.
+      - Every requirement MUST have at least one #### Scenario.
+
+      Specs should be testable — each scenario is a potential test case.
+      Reference design.md for architectural context that informs requirement
+      constraints.
+
+  - id: tasks
+    generates: tasks.md
+    description: Implementation checklist with trackable tasks
+    template: tasks.md
+    requires:
+      - specs
+      - design
+    instruction: |
+      PRECONSULT: MUST invoke OmO momus agent (type) after drafting tasks.md.
+      Do NOT skip even if the task decomposition appears clear or straightforward.
+      Momus validates task granularity, dependency ordering, and spec coverage.
+      Address all momus issues before proceeding to plan.
+
+      Create the task list that breaks down the implementation work.
+
+      **IMPORTANT: Follow the template format exactly.** The apply phase parses
+      checkbox format to track progress. Tasks not using `- [ ]` will not be
+      tracked.
+
+      Guidelines:
+      - Group related tasks under ## numbered headings (e.g., ## 1. Foundation).
+      - Each task MUST be a checkbox: `- [ ] X.Y Task description`
+        where X is the group number and Y is the task number within the group.
+      - Each task should reference the spec(s) it implements and the design
+        decision(s) it follows. Example:
+        `- [ ] 1.1 Create PdfService interface (spec: pdf-export, design: D2)`
+      - Tasks should be small enough to complete in one session.
+      - Order tasks by dependency (what must be done first?).
+
+      Reference specs/ for WHAT needs to be built and design.md for HOW to
+      build it (architecture decisions, trade-offs, migration plan).
+
+      This file is the progress tracker — the apply phase's `tracks` field
+      parses these checkboxes to report completion status.
+
+  - id: plan
+    generates: plan.md
+    description: Micro-step implementation plan using Superpowers writing-plans
+    template: plan.md
+    requires:
+      - tasks
+    instruction: |
+      PRECHECK — required skill availability:
+      Before invoking, confirm `superpowers:writing-plans` appears in your
+      available skills list. If missing, STOP and inform the user that the
+      Superpowers plugin must be installed (or that they can explicitly opt to
+      write plan.md manually using the template below). Do NOT silently fall back.
+
+      PRECONSULT: MUST invoke OmO momus agent (type) after drafting plan.md.
+      Do NOT skip even if the implementation plan appears clear or straightforward.
+      Momus validates micro-step quality, type consistency, and placeholder detection.
+      Address all momus issues before proceeding to apply.
+
+      ## Execution
+
+      Use the Skill tool to invoke **superpowers:writing-plans**.
+
+      Pass the tasks.md content to the skill as the input for decomposition.
+      The plan should reference the specs and design artifacts in this change
+      directory.
+
+      The writing-plans skill will:
+      1. Read the tasks.md and design.md for context
+      2. Break each task into 2-5 minute micro-steps (TDD style)
+      3. Include exact file paths, code snippets, test commands
+      4. Add commit points after each task
+
+      ## Plan Quality Rules (from Superpowers)
+      - Each step is 2-5 minutes (one action per step).
+      - No Placeholders: ban "TBD", "add error handling", "write tests",
+        "similar to Task N", or any vague instruction.
+      - Each step must contain actual code or specific file paths.
+      - Type consistency across tasks — if a function signature is established
+        in one step, all subsequent steps must use the same signature.
+
+      ## Output Redirection Rules
+      - ❌ NO output to docs/superpowers/plans/
+      - ❌ NO output to .sisyphus/plans/
+      - ✅ ALL output to openspec/changes/<change-name>/plan.md
+
+  # ═══════════════════════════════════════════════════
+  # Phase 3: Verification & Retrospective
+  # ═══════════════════════════════════════════════════
+  - id: verify
+    generates: verify.md
+    description: >
+      Post-implementation verification of spec compliance and test coverage.
+      Unlike code review (which assesses code quality and style), verify
+      focuses on whether specs are correctly implemented and tested.
+    template: verify.md
+    requires:
+      - plan
+    instruction: |
+      PRECHECK — implementation evidence:
+      Before producing verify.md, run BOTH commands. If either returns 0,
+      STOP and tell the user that apply phase has not yet produced reviewable
+      changes.
+
+      1. Commit evidence (must return > 0):
+         git log --oneline $(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD origin/master 2>/dev/null)..HEAD | wc -l
+
+      2. Task progress (must return > 0):
+         grep -c '^- \[x\]' openspec/changes/<change-name>/tasks.md
+
+      Only after BOTH return positive numbers, proceed to invoke
+      the verification skill below.
+
+      Use the Skill tool to invoke **openspec-verify-change** (the
+      `/opsx:verify` slash command is its user-facing equivalent).
+      This built-in skill runs the 8-check procedure and records
+      results in verify.md using the template.
+
+      If `openspec-verify-change` skill is unavailable, fall back to
+      running the numbered checks below manually and recording results
+      in verify.md.
+
+      IMPORTANT timing note:
+      - Unlike other artifacts, verify.md is produced AFTER the apply phase
+        completes, NOT during planning. The `requires: [plan]` edge exists only
+        for schema graph purposes — the actual verification step MUST run on a
+        completed implementation.
+
+      ## 8-Check Procedure
+
+      1. **Structural Validation**: Run `openspec validate --all --json` in the
+         repository root and confirm every item returns `"valid": true`. If any
+         item fails, record the issues and return to fix the underlying artifact
+         before proceeding.
+
+      2. **Task Completion**: Confirm every checkbox in tasks.md is `- [x]`.
+         For any `- [ ]` remaining, document the reason (e.g., manual /
+         out-of-scope / blocked) and whether it blocks archive.
+
+      3. **Delta Spec Sync State**: For each directory under
+         `openspec/changes/<name>/specs/`, compare against the corresponding
+         `openspec/specs/<capability>/spec.md` and record one of:
+         - ✓ Already synced
+         - ✗ Needs sync (list the capabilities)
+         - N/A (no delta specs produced)
+
+      4. **Design/Specs Coherence**: Spot-check that design.md decisions
+         reference or align with the requirements listed in specs/. Record any
+         drift as a warning (non-blocking).
+
+      5. **Implementation Signal**: Confirm all code changes are committed (no
+         unstaged files in the worktree). Cite the commit range if known.
+
+      6. **Front-Door Routing Leak Detector** (warning, non-blocking):
+         Design output should never land in `docs/superpowers/specs/` — the
+         discover artifact's output redirection routes it to
+         `openspec/changes/<name>/discover.md`. Run:
+
+           ls docs/superpowers/specs/*.md 2>/dev/null
+
+         If any files exist, record a WARNING: "Front-door routing leak —
+         design output found at docs/superpowers/specs/...; these belong in
+         openspec/changes/<name>/discover.md or design.md. Move/delete after
+         confirming content is captured in the change directory."
+
+         Non-blocking — adopters may have legitimate non-schema use of that
+         directory predating schema install.
+
+      7. **TDD Compliance**: Verify test files exist and were written before
+         implementation.
+         - Run: `git log --diff-filter=A --name-only -- '*.test.*' '*.spec.*'`
+         - Verify test files were added in earlier commits than their
+           corresponding implementation files.
+         - Record per-task TDD compliance: ✓ test-first / ✗ code-first.
+
+      8. **Deferred Dogfood vs Automated-Test Equivalence**:
+         If plan.md has any tasks marked `[~]` deferred (manual smoke / dogfood
+         / live-environment checks that were not run in this cycle), enumerate
+         each in verify.md section 8 and identify the equivalent automated test
+         that covers the same assertions.
+
+         If no equivalent automated test exists for a deferred manual check,
+         that row is a real coverage gap — record in retrospective Misses with
+         a follow-up plan, not silently deferred.
+
+         Non-blocking on its own — Overall Decision remains PASS even with
+         identified gaps, provided they are recorded as follow-up. Blocks only
+         if section 8 is empty AND plan.md has `[~]` rows (means the gap
+         analysis was skipped, not that gaps do not exist).
+
+      ## Overall Decision
+      - [ ] ✅ PASS
+      - [ ] ⚠️ PASS WITH WARNINGS
+      - [ ] ❌ FAIL (blocking)
+
+      Verify MAY be re-run multiple times as the implementation is refined —
+      each run overwrites verify.md with current state.
+
+  - id: retrospective
+    generates: retrospective.md
+    description: Evidence-first retrospective of completed change
+    template: retrospective.md
+    requires:
+      - verify
+    instruction: |
+      PRECHECK — verify completion evidence:
+      Before producing retrospective.md, run these commands. If either fails,
+      STOP and tell the user verify must pass first.
+
+      1. verify.md exists:
+         test -f openspec/changes/<change-name>/verify.md
+
+      2. verify.md's Overall Decision is NOT marked as FAIL:
+         ! grep -q '^- \[x\] ❌ FAIL' openspec/changes/<change-name>/verify.md
+
+      Only after both succeed, proceed.
+
+      IMPORTANT timing note:
+      - retrospective.md is produced AFTER apply phase completes and verify.md
+        shows no blocking issues. The `requires: [verify]` edge exists only for
+        schema graph purposes; the actual retrospective MUST run on a completed,
+        verified implementation.
+
+      ## Process
+
+      1. **Gather evidence**
+         - Run `git log --oneline <base>..HEAD` in the change worktree (or main
+           checkout if the worktree was already merged) to get the commit range.
+         - Read discover.md, plan.md, tasks.md in this change directory for
+           plan-vs-actual comparison.
+         - If verify.md contains failing items, address them BEFORE writing the
+           retro.
+
+      2. **Write the retrospective sections** — each claim cites a commit hash,
+         file path, test name, or measurable fact.
+
+         The retrospective has section 0 Evidence (quantitative front-matter)
+         plus 6 analysis sections (sections 1-6). Downstream analysis bullets
+         reference section 0 instead of inlining evidence per line.
+
+          Section 0) **Evidence** — quantitative front-matter populated from
+              `git log <base>..HEAD`, `tasks.md`, and verify.md: commit count,
+              diff size (lines/files), tasks-done ratio, active hours, subagent
+              dispatch count, model usage breakdown (which OmO categories were
+              used for which tasks), new external dependencies, OpenSpec
+              validate state at archive, test coverage delta, and a one-line
+              commit chain.
+
+         Section 1) **Wins** — what worked well, with evidence.
+
+         Section 2) **Misses** — what did not, marked by severity:
+             - 🔴 blocking
+             - 🟡 painful
+             - 📌 nit
+
+         Section 3) **Plan Deviations** — tasks whose scope changed, and why.
+
+         Section 4) **Skill / Workflow Compliance** — list each skill in this
+             schema's apply phase; mark whether it was actually used (✓/✗).
+             For any ✗, fill the `### Deliberately Skipped Skills` subsection
+             per the rules below.
+
+         Section 5) **Surprises** — assumptions that turned out wrong.
+
+         Section 6) **Promote Candidates → long-term learning** — use a
+             `- [ ]` checklist (not a flat table). Each candidate:
+             - Title with severity emoji (🔴/🟡/📌) + one-sentence learning
+             - `→ **Promote to** <destination>` (memory / CLAUDE.md / schema /
+               skill / one-off)
+             - Two body lines: `> **Why**: <reason>` and
+               `> **How to apply**: <trigger condition>`
+              Unchecked `- [ ]` items represent in-flight candidates that carry
+              into the next cycle's retro for re-evaluation.
+
+       3. **Update project documentation** — apply Section 6 promote candidates
+          that target documentation files. Each update must be precise and
+          bullet-point brief. Do NOT add narrative prose.
+
+          - **openspec/config.yaml**:
+            - Common learnings (apply to all artifacts) → append to `context`
+            - Artifact-specific learnings → append to `rules.<artifact-id>`
+              (valid keys: discover, proposal, design, specs, tasks, plan,
+              verify, retrospective)
+          - **AGENTS.md / CLAUDE.md**: project-level learnings (coding patterns,
+            tooling, conventions) → append to the appropriate section
+
+          After updating, check off the corresponding Section 6 items
+          (`- [x]`).
+
+       **Skipped-skill rules for Section 4**:
+
+      The schema was designed with the explicit intent that no apply-phase skill
+      should be skipped — each skill is in the flow for a reason. Default
+      expectation: Section 4 has every row marked ✓.
+
+      For any skill marked ✗, DO NOT just write a one-line reason. Instead, the
+      `### Deliberately Skipped Skills` subsection must answer three questions
+      per skipped skill:
+
+      - **What was skipped**: the specific skill or sub-step.
+      - **Why this cycle**: the concrete cycle condition that triggered the skip.
+        Vague reasons ("not needed", "too small", "no time") are insufficient —
+        name the actual trigger (a specific commit hash, log line, or observed
+        behavior).
+      - **How to prevent recurrence**: which of these the next cycle in the same
+        situation should rely on instead — schema graph fix / skill description
+        tightening / CLAUDE.md trigger / scope-judgment rule / explicit "one-off
+        — schema boundary case" (the last must state why it is a boundary, not
+        just label the exception).
+
+      If multiple cycles skip the same skill with similar "How to prevent"
+      answers, that pattern is a Section 6 Promote candidate (schema / skill PR
+      motivator).
+
+      **Retrospective skipping policy**:
+      - Trivial single-commit fixes: OK to skip the retrospective entirely.
+        Write a one-liner reason in retrospective.md (e.g., "Skipped:
+        single-commit linter fix, no insights").
+      - Anything else: produce Section 0 Evidence plus all 6 analysis sections
+        (a placeholder "(none observed)" is fine if a section truly has nothing).
+
+      **Forward-pointer policy (when facts change after writing)**:
+      - Do NOT rewrite the retrospective (loses audit trail of what was known
+        at the time).
+      - Add a forward-pointer in the retrospective itself:
+        `> **Update YYYY-MM-DD**: section X superseded by <link to follow-up
+        retro / commit / issue>`
+      - The follow-up artifact carries the corrected analysis.
+
+      Write output to retrospective.md using the template structure.
+
+apply:
+  requires:
+    - plan
+  tracks: tasks.md
+  instruction: |
+    ## Superspec Apply Phase — 8-Step Execution
+
+    ### Step 0: Pre-flight — Verify Required Skills
+
+    This schema's apply phase requires the following skills. Confirm each
+    appears in your available skills list before proceeding:
+
+    - superpowers:using-git-worktrees
+    - superpowers:subagent-driven-development
+      (transitively: superpowers:test-driven-development,
+                     superpowers:requesting-code-review)
+    - superpowers:finishing-a-development-branch
+    - superpowers:receiving-code-review
+
+    If any required skill is missing, STOP and inform the user — do NOT
+    proceed and do NOT silently fall back to manual implementation. The user
+    can install the Superpowers plugin, or explicitly opt into an alternative
+    schema (e.g., spec-driven).
+
+    Additionally, confirm the project's expected CLI tools are on PATH. Read
+    plan.md and surface any tool mentioned (e.g., `mvn`/`mvnw`, `docker`,
+    `python3`, `jq`, `gh`, `node`/`npm`). If a tool is missing, surface as
+    WARNING (not STOP) — the user may have a fallback. Print the missing list
+    once at apply start so the user is not surprised mid-cycle.
+
+    ### Step 1: Workspace — Git Worktrees
+
+    Use the Skill tool to invoke **superpowers:using-git-worktrees** to create
+    an isolated git worktree for this change.
+
+    The worktree provides:
+    - Isolated branch for this change
+    - Clean working directory
+    - Ability to run tests without affecting main branch
+
+    ### Step 2: Execute — Subagent-Driven Development + TDD Iron Law
+
+    **⚠️ MANDATORY — NON-NEGOTIABLE:**
+    You MUST use the Skill tool to invoke **superpowers:subagent-driven-development**.
+    This is the ONLY approved execution mechanism for the apply phase. Do NOT
+    substitute with sequential task execution, manual implementation, direct coding,
+    or any alternative workflow. If the skill is unavailable, STOP — do NOT fall back.
+
+    Use the Skill tool to invoke **superpowers:subagent-driven-development** to
+    execute the plan.md micro-tasks with fresh subagents per task.
+
+    Tell the executor:
+    - Read plan.md in this change directory for micro-tasks
+    - Update tasks.md checkboxes (`- [ ]` → `- [x]`) after EACH task
+      completion — not batched at the end. This keeps `openspec
+      instructions apply` progress accurate throughout execution.
+    - Work within the created worktree
+
+    **CRITICAL: Output Redirection Rules**
+    - ❌ Do NOT write any files to docs/superpowers/
+    - ❌ Do NOT write any files to .sisyphus/
+    - ✅ All code changes go to the project source tree only
+    - ✅ All SDD artifacts stay in openspec/changes/<change-name>/
+
+    **TDD Enforcement (Iron Law):**
+    NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.
+    - Red-Green-Refactor with mandatory verification gates.
+    - If code was written before test: DELETE IT. Start over.
+    - Every task follows: write failing test → watch it fail → minimal code → pass.
+
+    **Transitive skill activation — MANDATORY VERIFICATION:**
+    subagent-driven-development internally enforces the following skills.
+    However, transitive enforcement does NOT guarantee execution — you MUST
+    actively verify that each skill is actually invoked and produces output
+    during the apply phase. Do NOT assume they ran; confirm evidence in the
+    execution log. If a transitive skill was NOT invoked, you MUST explicitly
+    invoke it yourself:
+    - **superpowers:test-driven-development** — every task follows
+      RED-GREEN-REFACTOR. Implementation code written before a failing test
+      is deleted. Verify: each task shows RED→GREEN→REFACTOR evidence.
+    - **superpowers:requesting-code-review** — after each task, a code-reviewer
+      subagent is dispatched to catch spec compliance and code quality issues.
+      Per task: spec-reviewer FIRST (correctness against specs), then
+      quality-reviewer (maintainability and code quality). Review loops until
+      both pass. A final review runs for the entire implementation before
+      apply concludes.
+      Verify: code-reviewer subagent dispatch logged per task.
+
+    **Post-execution code review — MANDATORY:**
+    After subagent-driven-development completes (including its internal
+    requesting-code-review cycle), you MUST invoke
+    **superpowers:receiving-code-review** to review what the superpowers
+    code review process produced. This is a separate, additional review step
+    that audits the quality and thoroughness of the code reviews performed
+    during execution. Do NOT skip this step — transitive code review within
+    subagent-driven-development is necessary but NOT sufficient on its own.
+
+    ### Step 3: Verify
+
+    Produce the `verify` artifact by invoking **openspec-verify-change**
+    (or `/opsx:verify`). This runs the 8-check procedure and produces
+    verify.md. Re-run verify until all blocking issues are resolved.
+
+    ### Step 4: Retrospective — BEFORE PR
+
+    Once verify.md shows no blocking issues, produce the `retrospective`
+    artifact BEFORE opening any PR. Run the retrospective artifact's
+    instruction (which has its own PRECHECK confirming verify.md exists and
+    is not FAIL).
+
+    Why now, not after PR: retrospective is part of this cycle's deliverables
+    and should land in the same PR. Writing it after PR merge produces a
+    separate trailing commit and loses the hot context (running tests, fresh
+    fix memory).
+
+    ### Step 5: Archive — OpenSpec Archive
+
+    Use the Skill tool to invoke **openspec-archive-change** (the
+    `/opsx:archive` slash command is its user-facing equivalent). This:
+    - Syncs delta specs from `openspec/changes/<name>/specs/` into
+      `openspec/specs/<capability>/spec.md`
+    - Moves the change folder to
+      `openspec/changes/archive/YYYY-MM-DD-<name>/`
+
+    The PR diff after archive contains the COMPLETE cycle state: all
+    artifacts done, spec synced into main specs, change under archive/.
+
+    ### Step 6: Finish — Finishing a Development Branch
+
+    After archive is done, use the Skill tool to invoke
+    **superpowers:finishing-a-development-branch**.
+
+    The branch's PR diff MUST contain the complete archived cycle. If it does
+    not (e.g., because archive or retrospective was skipped), STOP and
+    complete those first.
+
+    This is the canonical opening sequence for the PR — do NOT reorder.
+
+    ### Step 7: Completion Report
+
+    Output a summary to the user:
+    - Tasks completed / total
+    - Spec compliance score (from verify.md section 3)
+    - TDD compliance status (from verify.md section 7)
+    - PR URL (if applicable)

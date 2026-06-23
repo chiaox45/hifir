@@ -1,0 +1,37 @@
+schema: superspec
+
+context: |
+  <!-- Common knowledge that needs to be inserted into every artifact -->
+
+rules:
+  specs:
+    - Use SHALL/MUST for normative requirements
+    - Every requirement must have at least one #### Scenario in BDD format
+    - Reference design.md decisions in requirement descriptions
+  tasks:
+    - Group related tasks under numbered ## headings
+    - Each task references spec(s) and design decision(s)
+    - Tasks should be completable in one subagent dispatch
+    - Update checkboxes after each task completion (not batched at end)
+  design:
+    - Number decisions D1, D2, etc. with rationale and alternatives considered
+    - Include pool/queue classification tables for concurrency decisions
+    - Document non-goals explicitly to prevent scope creep
+  discover:
+    - First thing is to ensure you are on a branch named `{type}/{change-name}` (e.g., `feat/add-fastapi-server`). Create it if it doesn't exist.
+    - Explore codebase with explore/librarian agents before brainstorming
+    - Metis review is mandatory — identifies ambiguities and gaps
+    - All output goes to discover.md (no docs/superpowers/ or .sisyphus/)
+  plan:
+    - Micro-steps must be 2-5 minutes each (one action per step)
+    - No placeholders, i.e., ban "TBD", "add error handling", "similar to Task N"
+    - Test mock paths must match implementation import style (lazy import → patch source module)
+    - Include relevant design tables (e.g., pool classification) directly in task briefs
+    - Momus review is mandatory after drafting
+  retrospective:
+    - Updating AGENTS.md, README.md, and openspec/config.yaml based on §6 Promote Candidates is MANDATORY — do not skip documentation updates
+    - Each §6 candidate targeting a documentation file must be applied and checked off (`- [x]`) before the retrospective is considered complete
+    - Common learnings (apply to all artifacts) go to `context`; artifact-specific learnings go to `rules.<artifact-id>` (list of strings)
+    - Project-level learnings (coding patterns, tooling, pitfalls) go to the appropriate AGENTS.md/CLAUDE.md section (Common Pitfalls, Architecture, etc.)
+    - New features must be reflected in README.md (Features list, CLI Reference, Quick Start)
+    - Architecture changes must update AGENTS.md/CLAUDE.md and/or any other related documents Project Structure, Data Flow, and Key Abstractions sections

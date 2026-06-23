@@ -45,3 +45,11 @@ CMakeFiles
 .MATLABDriveTag
 examples/demo
 tests/*.mm
+.superinit
+.opencode/commands/opsx-*.md
+.opencode/skills/openspec-*
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.sisyphus/
+.memsearch/

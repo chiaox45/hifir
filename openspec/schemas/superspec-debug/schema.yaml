@@ -1,0 +1,152 @@
+name: superspec-debug
+version: 1
+description: >
+  Debugging and fix workflow combining systematic-debugging analysis,
+  OmO agent consultation for root cause identification, and TDD-disciplined
+  implementation. Lightweight 2-artifact schema optimized for bug fixes.
+  DAG: analyze -> tasks -> [apply].
+  OmO ultrawork mode recommended for best automation.
+
+artifacts:
+  - id: analyze
+    generates: analyze.md
+    description: Deep analysis of the bug/issue with root cause identification
+    template: analyze.md
+    requires: []
+    instruction: |
+      PRECHECK — required skill availability:
+      Before invoking, confirm `superpowers:systematic-debugging` appears in your
+      available skills list. If missing, STOP and inform the user that the
+      Superpowers plugin must be installed. Systematic-debugging is mandatory —
+      do NOT offer manual authoring as an alternative and do NOT silently fall back.
+
+      ## Execution
+
+      Use the Skill tool to invoke **superpowers:systematic-debugging** FIRST.
+      This is the primary analysis mechanism — execute it before any agent
+      consultation.
+
+      The systematic-debugging skill will:
+      1. Gather symptoms and reproduction steps
+      2. Collect evidence (logs, stack traces, error messages)
+      3. Formulate hypotheses ranked by likelihood
+      4. Identify root cause through elimination
+      5. Assess impact and scope of the bug
+
+      ## Agent Consultation (during skill execution)
+
+      During the systematic-debugging skill execution, consult these OmO agents
+      as needed — NOT as a pre-step, but integrated into the debugging flow when
+      the skill's investigation surfaces a need:
+
+      - **librarian** (type): When the bug involves unfamiliar libraries, external
+        dependencies, or requires searching documentation, known issues, and similar
+        bug reports. Surface a WARNING if unavailable.
+      - **explore** (type): When codebase analysis, pattern finding, or locating
+        related code is needed to trace the bug's origin. Surface a WARNING if
+        unavailable.
+      - **oracle** (type): When complex debugging decisions, architectural
+        implications, or non-obvious root causes require deep reasoning.
+        Surface a WARNING if unavailable.
+
+      The key distinction: agents serve the skill's investigation, not the other
+      way around. Invoke them when the debugging process reveals a gap that
+      agent expertise can fill.
+
+      Write output to analyze.md using the template structure.
+
+  - id: tasks
+    generates: tasks.md
+    description: Implementation checklist for the fix
+    template: tasks.md
+    requires:
+      - analyze
+    instruction: |
+      ## Superspec-Debug Tasks
+
+      Implementation checklist for the fix based on analyze.md root cause.
+
+      PRECONSULT: MUST invoke OmO momus agent (type) after drafting tasks.md.
+      Do NOT skip even if the task plan appears clear or straightforward.
+      Momus validates task completeness, test coverage, and fix correctness.
+      Address all momus issues before proceeding to apply.
+
+      ### Format:
+      - Use checkbox format: `- [ ] X.Y Task description`
+      - Group related tasks under ## numbered headings
+      - First task should be: "Add failing test that reproduces the bug"
+      - Include verification tasks
+      - For bug fixes, 3-6 tasks is typical
+
+      ### Example:
+      ```
+      ## 1. Test Coverage
+      - [ ] 1.1 Add failing test that reproduces the bug
+      - [ ] 1.2 Add edge case tests for related scenarios
+
+      ## 2. Implementation
+      - [ ] 2.1 Fix root cause identified in analyze.md
+      - [ ] 2.2 Add defensive checks if needed
+
+      ## 3. Verification
+      - [ ] 3.1 Verify all tests pass
+      - [ ] 3.2 Verify no regressions in related functionality
+      ```
+
+      Reference analyze.md for root cause and impact assessment.
+
+apply:
+  requires:
+    - tasks
+  tracks: tasks.md
+  instruction: |
+    ## Superspec-Debug Apply Phase
+
+    For bug fixes, direct implementation with superpowers discipline.
+
+    ### Recommended: OmO Ultrawork Mode
+    For best automation, use OmO `ultrawork` mode. This enables:
+    - Autonomous task execution with minimal intervention
+    - Automatic TDD enforcement
+    - Built-in verification and code review
+    - Continuous progress tracking
+
+    ### Required Skills:
+    Use the Skill tool to invoke these superpowers skills during apply:
+
+    - **superpowers:using-git-worktrees** — create an isolated git worktree
+      for this fix at the start of apply. Provides a clean branch and working
+      directory for implementation and testing.
+    - **superpowers:test-driven-development** — every fix starts with a failing
+      test that reproduces the bug. NO FIX WITHOUT A FAILING TEST FIRST.
+      Red-Green-Refactor discipline.
+    - **superpowers:verification-before-completion** — run verification
+      commands and confirm output before claiming the fix is complete.
+      Evidence before assertions.
+    - **superpowers:requesting-code-review** — after implementation,
+      request code review to catch spec compliance and quality issues
+      before merge.
+    - **superpowers:receiving-code-review** — after requesting-code-review
+      produces results, review what the code review process found. Fix all
+      identified issues, then repeat the requesting → receiving cycle until
+      receiving-code-review confirms no remaining issues.
+    - **superpowers:finishing-a-development-branch** — after all fixes are
+      verified and code review is clean, finish the branch (PR creation or
+      merge). This is the final step of apply.
+
+    ### Steps:
+    1. Create isolated worktree (using-git-worktrees skill)
+    2. Read analyze.md for root cause and impact
+    3. Read tasks.md for the implementation checklist
+    4. Implement each task following TDD (test-driven-development skill)
+    5. Update tasks.md checkboxes as tasks complete
+    6. Run verification-before-completion before claiming done
+    7. Request code review (requesting-code-review skill)
+    8. Review the code review results (receiving-code-review skill)
+    9. If receiving-code-review identifies issues: fix them, then repeat
+       steps 7-8 until receiving-code-review confirms all issues resolved
+    10. Finish the development branch (finishing-a-development-branch skill)
+
+    ### Output:
+    - All code changes go to the project source tree
+    - All SDD artifacts stay in openspec/changes/<change-name>/
