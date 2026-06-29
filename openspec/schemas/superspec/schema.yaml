@@ -29,6 +29,12 @@ artifacts:
          an alternative and do NOT silently fall back.
       2. Confirm OmO metis agent (type) is available. If unavailable, STOP —
          metis review is mandatory and cannot be skipped.
+      3. (Optional dependency skill) Check if `chiao-arch-review` appears in
+         your available skills list. If present, it will be loaded onto the
+         metis agent in Step 3 to adversarially review the brainstorming
+         results from an architecture perspective. If absent, Step 3 proceeds
+         with standard metis review only — this is non-blocking and does NOT
+         stop the workflow.
 
       ## Execution
 
@@ -60,6 +66,14 @@ artifacts:
         - ⚡ Pass relevant already-completed Explore/Librarian results to Metis
           as context — re-running them is time-consuming and unnecessary.
         - Do NOT write to .sisyphus/plans/ or any .sisyphus/ subdirectory.
+        - **Conditional — chiao-arch-review**: If PRECHECK step 3 confirmed
+          `chiao-arch-review` is available, you MUST spawn the metis review
+          with `load_skills=["chiao-arch-review"]` so metis can adversarially
+          review the brainstorming results (Step 2) from an architecture
+          perspective — surfacing architectural risks, boundary violations,
+          and hidden assumptions early in discovery. The architecture review
+          findings append to discover.md as part of the final review section.
+          If the skill is absent, dispatch metis without it (standard review).
 
       ## Output Redirection Rules
       - ❌ NO output to docs/superpowers/specs/
@@ -204,12 +218,14 @@ artifacts:
       - specs
       - design
     instruction: |
-      PRECONSULT: MUST invoke OmO momus agent (type) after drafting tasks.md.
-      Do NOT skip even if the task decomposition appears clear or straightforward.
-      Momus validates task granularity, dependency ordering, and spec coverage.
-      Address all momus issues before proceeding to plan.
-
       Create the task list that breaks down the implementation work.
+
+      **Note on review (consolidated into plan):** Task-structure validation
+      (granularity, dependency ordering, spec coverage) is NO LONGER a separate
+      PRECONSULT gate on this artifact. It is consolidated into the plan
+      artifact's comprehensive momus review — avoiding reviewing the same
+      decomposition at two zoom levels (tasks = macro, plan = micro). See the
+      plan artifact's PRECONSULT instruction for the consolidated review scope.
 
       **IMPORTANT: Follow the template format exactly.** The apply phase parses
       checkbox format to track progress. Tasks not using `- [ ]` will not be
@@ -244,10 +260,39 @@ artifacts:
       Superpowers plugin must be installed (or that they can explicitly opt to
       write plan.md manually using the template below). Do NOT silently fall back.
 
+      (Optional dependency skill) Check if `chiao-dev-review` appears in your
+      available skills list. If present, it will be loaded onto the momus agent
+      in the PRECONSULT below to adversarially audit the plan's developer
+      experience (DX) — producing a 5-dimension scorecard and readiness signal.
+      If absent, the PRECONSULT proceeds with standard momus review only — this
+      is non-blocking and does NOT stop the workflow.
+
       PRECONSULT: MUST invoke OmO momus agent (type) after drafting plan.md.
       Do NOT skip even if the implementation plan appears clear or straightforward.
-      Momus validates micro-step quality, type consistency, and placeholder detection.
-      Address all momus issues before proceeding to apply.
+      This is a CONSOLIDATED review — it absorbs the former separate tasks→momus
+      gate (task-structure checks) and adds cross-artifact coherence. Momus
+      validates, in one pass:
+      - **Micro-step quality**: type consistency, placeholder detection (current scope).
+      - **Task structure** (absorbed from tasks artifact): granularity, dependency
+        ordering, spec coverage.
+      - **Cross-artifact coherence** (NEW): specs↔tasks↔plan mutual consistency —
+        does every spec scenario have corresponding tasks and plan steps? Does the
+        plan faithfully decompose the tasks? Is there drift between specs (what we
+        said we'd build) and plan (what we're going to build)?
+      - **Plan-vs-design drift** (NEW, light): does the plan deviate from design.md
+        decisions (D1, D2, ...) in ways that reintroduce architectural risk?
+      Address all momus issues before proceeding to apply. Capture findings in the
+      `## Plan Review` section of plan.md (see template).
+
+      **Conditional — chiao-dev-review**: If PRECHECK confirmed `chiao-dev-review`
+      is available, you MUST spawn the momus review with
+      `load_skills=["chiao-dev-review"]` so momus can adversarially audit the
+      plan's developer experience — surfacing DX friction, kill-assumptions, and
+      missing magical moments before implementation begins. The DX scorecard and
+      readiness signal append to plan.md's `## Plan Review` section. Use the
+      skill's escape-hatch ("just do it") for non-interactive subagent contexts,
+      marking output "UNREVIEWED" per the skill's rules. If the skill is absent,
+      dispatch momus without it (standard review).
 
       ## Execution
 

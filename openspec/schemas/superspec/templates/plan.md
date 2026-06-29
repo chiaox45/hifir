@@ -9,7 +9,7 @@
 
 **Tech Stack:** <!-- Key technologies -->
 
-**Momus Review:** <!-- ⬜ Pending / ✅ Approved / ❌ Issues found (list below) -->
+**Plan Review:** <!-- ⬜ Pending / ✅ Approved / ❌ Issues found (see § Plan Review below) -->
 
 ---
 
@@ -27,3 +27,31 @@
 - [ ] **Step 2:** <!-- micro-step -->
 
 <!-- Commit point after Task 2 -->
+
+---
+
+## Plan Review
+
+> Output from OmO momus agent review. This is a CONSOLIDATED review covering
+> micro-step quality, task structure (absorbed from the former tasks→momus gate),
+> specs↔tasks↔plan coherence, and plan-vs-design drift. If `chiao-dev-review`
+> was loaded, the DX scorecard appears below.
+
+**Status:** <!-- ✅ Approved / ❌ Issues found (list below) -->
+
+### Findings
+
+<!-- List each finding with: dimension, plan-section citation, issue, fix. -->
+
+### DX Scorecard (if chiao-dev-review was loaded)
+
+| Dim | Score | Gap-to-10 | Citation |
+|-----|-------|-----------|----------|
+| Getting Started | | | |
+| API/CLI/SDK Design | | | |
+| Error Messages & Debugging | | | |
+| Documentation & Learning | | | |
+| Upgrade, Tooling & Ecosystem | | | |
+
+**TTHW:** <!-- Xmin (target: Ymin) -->
+**Signal:** <!-- READY / NEEDS-WORK / NOT-READY -->
