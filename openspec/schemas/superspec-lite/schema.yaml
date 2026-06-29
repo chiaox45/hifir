@@ -1,0 +1,140 @@
+name: superspec-lite
+version: 1
+description: >
+  Lightweight SDD workflow for small features, config changes, and documentation updates.
+  Simplified alternative to superspec (8-artifact full schema) for trivial changes.
+  DAG: brief -> tasks -> [apply].
+  TDD still required for code changes. Uses superpowers skills for discipline.
+  OmO ultrawork mode recommended for best automation.
+
+artifacts:
+  - id: brief
+    generates: brief.md
+    description: Combined discovery, proposal, and design for small changes
+    template: brief.md
+    requires: []
+    instruction: |
+      ## Superspec-Lite Brief
+
+      Combined discovery + proposal + design for small changes.
+
+      ### Required Sections:
+
+      **Why** (motivation, 50-1000 chars):
+      Explain the problem or reason for this change. Be concise.
+
+      **What** (specific changes, From/To format):
+      Describe exactly what changes. Use From/To format where applicable:
+      - From: <current state>
+      - To: <desired state>
+
+      **How** (approach, key decisions, 2-3 sentences max):
+      Brief description of the implementation approach.
+      Note any key decisions or tradeoffs.
+
+      **Impact** (affected files, risk level):
+      - List affected files or directories
+      - Risk level: low / medium / high
+
+      ### Metis Review (MANDATORY):
+      MUST invoke OmO metis agent (type) after drafting brief.md.
+      Do NOT skip even if the brief appears clear or straightforward.
+      Review the brief for completeness, ambiguity, and missing considerations.
+      Address metis findings before proceeding to tasks.
+      ⚡ Pass relevant already-completed Explore/Librarian results to Metis
+      as context — re-running them is time-consuming and unnecessary.
+
+      ### Guidance:
+      This replaces discover + proposal + design for small changes.
+      No need to invoke brainstorming for trivial changes.
+
+  - id: tasks
+    generates: tasks.md
+    description: Implementation checklist for the change
+    template: tasks.md
+    requires:
+      - brief
+    instruction: |
+      ## Superspec-Lite Tasks
+
+      Implementation checklist for the change described in brief.md.
+
+      PRECONSULT: MUST invoke OmO momus agent (type) after drafting tasks.md.
+      Do NOT skip even if the task plan appears clear or straightforward.
+      Momus validates task completeness, test coverage, and change correctness.
+      Address all momus issues before proceeding to apply.
+
+      ### Format:
+      - Use checkbox format: `- [ ] X.Y Task description`
+      - Group related tasks under ## numbered headings
+      - For small changes, 3-5 tasks is typical
+      - Each task should be completable in under 30 minutes
+
+      ### Example:
+      ```
+      ## 1. Core Changes
+      - [ ] 1.1 Update configuration file
+      - [ ] 1.2 Modify handler function
+      - [ ] 1.3 Add error handling
+
+      ## 2. Testing
+      - [ ] 2.1 Write unit test for new behavior
+      - [ ] 2.2 Verify existing tests still pass
+      ```
+
+      Reference brief.md for what needs to be built.
+
+apply:
+  requires:
+    - tasks
+  tracks: tasks.md
+  instruction: |
+    ## Superspec-Lite Apply Phase
+
+    For small changes, direct implementation with superpowers discipline.
+
+    ### Recommended: OmO Ultrawork Mode
+    For best automation, use OmO `ultrawork` mode. This enables:
+    - Autonomous task execution with minimal intervention
+    - Automatic TDD enforcement
+    - Built-in verification and code review
+    - Continuous progress tracking
+
+    ### Required Skills:
+    Use the Skill tool to invoke these superpowers skills during apply:
+
+    - **superpowers:using-git-worktrees** — create an isolated git worktree
+      for this change at the start of apply. Provides a clean branch and working
+      directory for implementation and testing.
+    - **superpowers:test-driven-development** — every task follows
+      RED-GREEN-REFACTOR. NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.
+    - **superpowers:verification-before-completion** — run verification
+      commands and confirm output before claiming work is complete.
+      Evidence before assertions.
+    - **superpowers:requesting-code-review** — after implementation,
+      request code review to catch spec compliance and quality issues
+      before merge.
+    - **superpowers:receiving-code-review** — after requesting-code-review
+      produces results, review what the code review process found. Fix all
+      identified issues, then repeat the requesting → receiving cycle until
+      receiving-code-review confirms no remaining issues.
+    - **superpowers:finishing-a-development-branch** — after all changes are
+      verified and code review is clean, finish the branch (PR creation or
+      merge). This is the final step of apply.
+
+    ### Steps:
+    1. Create isolated worktree (using-git-worktrees skill)
+    2. Read brief.md for what to build and why
+    3. Read tasks.md for the implementation checklist
+    4. Implement each task following TDD (test-driven-development skill)
+    5. Update tasks.md checkboxes as tasks complete
+    6. Run verification-before-completion before claiming done
+    7. Request code review (requesting-code-review skill)
+    8. Review the code review results (receiving-code-review skill)
+    9. If receiving-code-review identifies issues: fix them, then repeat
+       steps 7-8 until receiving-code-review confirms all issues resolved
+    10. Finish the development branch (finishing-a-development-branch skill)
+
+    ### Output:
+    - All code changes go to the project source tree
+    - All SDD artifacts stay in openspec/changes/<change-name>/
