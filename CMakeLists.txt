@@ -94,3 +94,10 @@ if(HIFIR_BUILD_C_LIB)
         add_subdirectory(libhifir/tests)
     endif()
 endif()
+
+# ---------------------------------------------------------------------------
+# Examples
+# ---------------------------------------------------------------------------
+if(HIFIR_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
