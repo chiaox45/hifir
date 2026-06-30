@@ -66,3 +66,21 @@ if(HIFIR_USE_OPENMP)
 endif()
 # ALIAS target for build-tree usage (matches installed namespace)
 add_library(hifir::hifir ALIAS hifir)
+
+# Enable CTest testing (must be at top-level for subdirectory tests)
+enable_testing()
+
+# ---------------------------------------------------------------------------
+# ASan support (global, not per-target)
+# ---------------------------------------------------------------------------
+if(HIFIR_ENABLE_ASAN)
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+endif()
+
+# ---------------------------------------------------------------------------
+# Subdirectories
+# ---------------------------------------------------------------------------
+if(HIFIR_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
