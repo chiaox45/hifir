@@ -86,14 +86,14 @@
 
 ## 10. Markdown Documentation Update
 
-- [ ] 10.1 Update `AGENTS.md` Commands section: replace all `make -C` with `cmake --preset` / `ctest --preset` commands (spec: cmake-build-system, design: D11)
-- [ ] 10.2 Update `AGENTS.md` Definition of Done: replace `make -C tests DEBUG=2` with `cmake --preset asan && ctest --preset asan`, etc. (spec: cmake-build-system, design: D5)
-- [ ] 10.3 Update `AGENTS.md` P1 restriction: change "C++11" to "C++17" (spec: cmake-build-system/C++17 Standard, design: D1)
-- [ ] 10.4 Update `AGENTS.md` Key Build Variables table: remove DEBUG/LAPACK_LIBS/USE_OPENMP, add HIFIR_USE_OPENMP/HIFIR_BUILD_*/HIFIR_ENABLE_ASAN/BLA_VENDOR (spec: cmake-build-system/Build Option Namespace, design: MR-B3)
-- [ ] 10.5 Update `AGENTS.md` Gotchas: remove GTest auto-detection gotcha, add CMake 3.24 requirement, add CMakePresets usage (spec: cmake-build-system, design: D7, D11)
-- [ ] 10.6 Update `README.md` install instructions: replace `make -C libhifir install` with `cmake --preset release && cmake --build --preset release && cmake --install build` (spec: cmake-build-system/Install Layout, design: D9)
-- [ ] 10.7 Update `libhifir/README.md`, `tests/README.md`, `examples/README.md`, `docs/doxygen/README.md` make→cmake (spec: cmake-build-system, design: D11)
-- [ ] 10.8 **TDD GATE**: `grep -r "make -C" *.md **/*.md` returns no matches (excluding openspec/ changes)
+- [x] 10.1 Update `AGENTS.md` Commands section: replace all `make -C` with `cmake --preset` / `ctest --preset` commands (spec: cmake-build-system, design: D11)
+- [x] 10.2 Update `AGENTS.md` Definition of Done: replace `make -C tests DEBUG=2` with `cmake --preset asan && ctest --preset asan`, etc. (spec: cmake-build-system, design: D5)
+- [x] 10.3 Update `AGENTS.md` P1 restriction: change "C++11" to "C++17" (spec: cmake-build-system/C++17 Standard, design: D1)
+- [x] 10.4 Update `AGENTS.md` Key Build Variables table: remove DEBUG/LAPACK_LIBS/USE_OPENMP, add HIFIR_USE_OPENMP/HIFIR_BUILD_*/HIFIR_ENABLE_ASAN/BLA_VENDOR (spec: cmake-build-system/Build Option Namespace, design: MR-B3)
+- [x] 10.5 Update `AGENTS.md` Gotchas: remove GTest auto-detection gotcha, add CMake 3.24 requirement, add CMakePresets usage (spec: cmake-build-system, design: D7, D11)
+- [x] 10.6 Update `README.md` install instructions: replace `make -C libhifir install` with `cmake --preset release && cmake --build --preset release && cmake --install build` (spec: cmake-build-system/Install Layout, design: D9)
+- [x] 10.7 Update `libhifir/README.md`, `tests/README.md`, `examples/README.md`, `docs/doxygen/README.md` make→cmake (spec: cmake-build-system, design: D11)
+- [x] 10.8 **TDD GATE**: `grep -r "make -C" *.md **/*.md` returns no matches (excluding openspec/ changes)
 
 ## 11. Remove Makefiles and Clean Up
 
