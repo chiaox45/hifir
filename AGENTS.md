@@ -319,6 +319,10 @@ Before reporting completion, verify ALL:
 4. **`-rdynamic` linker flag is required** for stack trace output via `hif::print_backtrace()` — applied automatically via `target_link_options` on Linux (`if(UNIX AND NOT APPLE)` guard).
 5. **CMakePresets.json uses separate binary dirs** per preset (`build-release`, `build-debug`, `build-asan`) to avoid cache conflicts between build types.
 6. **libhifir builds two binaries from one `.cpp`**: `libhifir_i32` and `libhifir_i64` are the same source compiled with different `-DLIBHIFIR_INT_SIZE` values. Both must build successfully.
+7. **`-ffast-math` cannot be PRIVATE on INTERFACE library**: INTERFACE libraries have no compile step; put `-ffast-math` on compiled targets only (SHARED, STATIC, EXECUTABLE) via `$<$<CONFIG:Release>:-ffast-math>`.
+8. **`file(GLOB ...)` requires `CONFIGURE_DEPENDS` before `RELATIVE`**: CMake syntax requires keywords before path options — write `file(GLOB VAR CONFIGURE_DEPENDS RELATIVE ${dir} "pattern")`.
+9. **`enable_testing()` must be at top-level**: Placing it in a subdirectory's CMakeLists.txt doesn't register tests from that subdirectory with CTest.
+10. **`find_dependency` requires `CMakeFindDependencyMacro`** (not `CMakeFindDependencyFramework`, which doesn't exist). The `@PACKAGE_INIT@` macro includes it automatically in config-file templates.
 
 ### Recording Lessons Learned
 
