@@ -1,23 +1,76 @@
-name: HIFIR CI
-on: [push]
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
 jobs:
-  HIFIR-CI:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev liblapack-dev
+
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Cache GTest
+        uses: actions/cache@v4
+        with:
+          path: build-debug/_deps
+          key: gtest-${{ matrix.compiler }}-${{ hashFiles('tests/CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake --preset debug
+        env:
+          CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+
+      - name: Build
+        run: cmake --build --preset debug
+
+      - name: Test C++
+        run: ctest --preset debug --label-regex 'cpp'
+
+      - name: Test C
+        run: ctest --preset debug --label-regex 'c'
+
+  asan:
     runs-on: ubuntu-latest
     steps:
-      - run: echo " The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo " This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo " The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - name: Install gtest
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install dependencies
         run: |
-          sudo apt-get install libgtest-dev
-      - name: Check out repository code
-        uses: actions/checkout@v2
-      - run: echo " The ${{ github.repository }} repository has been cloned to the runner."
-      - run: echo " The workflow is now ready to test your code on the runner."
-      - name: run unit tests
-        run: |
-          cd tests && make DEBUG=2 && cd ..
-      - name: build and test examples
-        run: |
-          cd examples && make DEBUG=2 runall
-      - run: echo " This job's status is ${{ job.status }}."
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev liblapack-dev
+
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Cache GTest
+        uses: actions/cache@v4
+        with:
+          path: build-asan/_deps
+          key: gtest-asan-${{ hashFiles('tests/CMakeLists.txt') }}
+
+      - name: Configure ASan
+        run: cmake --preset asan
+
+      - name: Build ASan
+        run: cmake --build --preset asan
+
+      - name: Test ASan
+        run: ctest --preset asan

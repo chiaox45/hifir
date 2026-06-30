@@ -13,17 +13,17 @@ To add a new test, create a file with `test_*.cpp`. For instance, let's make a n
 TEST(...) {...}
 ```
 
-Our unit testing framework can automatically extract all the dependencies. Now, simply just type
+CMake auto-discovers all `test_*.cpp` files — no manual target registration needed. To build and run a single test:
 
 ```console
-make test_foo
+cmake --build --preset debug
+ctest --preset debug -R test_foo
 ```
 
 ## Hint ##
 
-It's recommended that you run test case executable with `Valgrind`, thus you can check if or not there are memory leaks; e.g.
+It's recommended that you run tests with AddressSanitizer to check for memory leaks:
 
 ```console
-make test_foo
-valgrind ./test_foo.exe
+cmake --preset asan && cmake --build --preset asan && ctest --preset asan
 ```

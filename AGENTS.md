@@ -3,36 +3,34 @@
 ## Overview
 HIFIR (Hybrid Incomplete Factorization with Iterative Refinement) is a multilevel
 preconditioner for ill-conditioned / nearly singular sparse linear systems.
-Header-only C++ library (C++11) with optional C runtime library (`libhifir`).
+Header-only C++ library (C++17) with optional C runtime library (`libhifir`).
 Sole dependency: LAPACK (OpenBLAS recommended). Licensed AGPLv3+ with commercial
 dual-licensing.
 
 ## Commands
 
 ### Build
-- **C++ unit tests**: `make -C tests [DEBUG=2]`
-- **Examples (all)**: `make -C examples`
-- **Single example**: `make -C examples beginner/demo_simple.exe`
-- **C library (libhifir)**: `make -C libhifir [-j]`
-- **C library install**: `make -C libhifir install [PREFIX=/path]`
+- **C++ unit tests**: `cmake --preset debug && cmake --build --preset debug && ctest --preset debug`
+- **Examples (all)**: `cmake --preset release && cmake --build --preset release`
+- **C library (libhifir)**: `cmake --build --preset release` (builds as part of default)
+- **C library install**: `cmake --install build-release --prefix /usr/local`
 
 ### Test
-- **Run all C++ tests**: `make -C tests DEBUG=2`
-- **Run single C++ test**: `make -C tests test_syev`
-- **Run C tests**: `make -C libhifir test`
-- **Run all examples**: `make -C examples runall`
+- **Run all C++ tests**: `cmake --preset debug && cmake --build --preset debug && ctest --preset debug`
+- **Run single C++ test**: `ctest --preset debug -R test_syev`
+- **Run C tests**: `ctest --preset debug --label-regex 'c'`
+- **Run all examples**: `cmake --preset release && cmake --build --preset release`
 - **CI full pipeline**:
   ```bash
-  cd tests && make DEBUG=2 && cd ..
-  cd examples && make DEBUG=2 runall
+  cmake --preset asan && cmake --build --preset asan && ctest --preset asan
   ```
-- **Memory check**: `valgrind ./tests/<test>.exe` after building a test
+- **Memory check**: `cmake --preset asan && cmake --build --preset asan && ctest --preset asan` (ASan enabled)
 
 ### Writing Tests
 - Test files live in `tests/` as `test_*.cpp` (34 tests, GTest-based).
 - **Must** `#include "common.hpp"` before any other `hif*.hpp` header.
-- Build and run a single test: `make -C tests test_foo` → produces `tests/test_foo.exe`.
-- Dependencies are auto-extracted by the Makefile; no manual target registration needed.
+- Build and run a single test: `cmake --build --preset debug` then `ctest --preset debug -R test_foo`.
+- Dependencies are auto-resolved by CMake; no manual target registration needed.
 - See `tests/README.md` for full conventions.
 
 ### Lint/Format
@@ -50,10 +48,14 @@ dual-licensing.
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `DEBUG` | unset (optimized) | `0`=`-DNDEBUG -O3`, `1`=`-g -DHIF_DEBUG`, `2`=`-g -fsanitize=address` |
-| `LAPACK_LIBS` | `-llapack -lblas` | Custom LAPACK library (e.g., `-lopenblas`) |
-| `USE_OPENMP` | `1` | Set `0` to disable OpenMP |
-| `PREFIX` | `/usr/local` | Install prefix for libhifir |
+| `CMAKE_BUILD_TYPE` | `Debug` | `Release`=`-O3 -DNDEBUG -ffast-math`, `Debug`=`-g -DHIF_DEBUG`, use `--preset` to set |
+| `HIFIR_USE_OPENMP` | `ON` | Set `OFF` to disable OpenMP (serial fallback) |
+| `HIFIR_BUILD_TESTS` | `ON` | Set `OFF` to skip C++ test build |
+| `HIFIR_BUILD_EXAMPLES` | `ON` | Set `OFF` to skip examples build |
+| `HIFIR_BUILD_C_LIB` | `ON` | Set `OFF` to skip libhifir dual-int build |
+| `HIFIR_ENABLE_ASAN` | `OFF` | Set `ON` to enable AddressSanitizer |
+| `BLA_VENDOR` | `All` | LAPACK vendor: `OpenBLAS`, `Intel10_64lp`, `Apple` |
+| `CMAKE_PREFIX_PATH` | unset | For downstream: path to hifir install |
 
 ## Architecture
 
@@ -99,7 +101,7 @@ Reference paper: [arXiv:2106.09877](https://arxiv.org/abs/2106.09877) — "HIFIR
 
 ### Key Design Decisions
 - **Header-only C++**: `src/` requires no compilation; just `#include "hifir.hpp"`.
-- **C++11 standard** enforced via `-std=c++11`; no C++14/17/20 features.
+- **C++17 standard** enforced via `target_compile_features(... cxx_std_17)`; no C++20+ features.
 - **Template-based**: `HIF<ValueType, IndexType>` supports `float`, `double`, `std::complex`.
 - **OpenMP parallelism** used for Schur complement construction; optional.
 - **LAPACK is the sole dependency**; BLAS is not directly called, only through LAPACK.
@@ -109,13 +111,13 @@ Reference paper: [arXiv:2106.09877](https://arxiv.org/abs/2106.09877) — "HIFIR
 ## Restrictions
 
 ### Priority Order
-P1: Code must compile with `-std=c++11` — no newer C++ features.
+P1: Code must compile with C++17 (`target_compile_features(... cxx_std_17)`) — no C++20+ features.
 P2: All headers must use `_HIF_XXX_HPP` guard pattern.
 P3: Source files must carry AGPLv3+ license banner (see existing files).
 
 ### Never
 - Never use `std::enable_if` or SFINAE without exhaustive `static_assert` checks — the library is heavily templated and errors propagate cryptically.
-- Never commit without running `make -C tests DEBUG=2` — CI enforces this.
+- Never commit without running `cmake --preset asan && cmake --build --preset asan && ctest --preset asan` — CI enforces this.
 - Never change `ind_start` / `indices` types without updating `libhifir` and downstream projects — this was a MAJOR breaking change in v0.2.0.
 - Never modify `HIF_RESERVE_FAC` (default: 5) without benchmarking — it controls memory preallocation during factorization.
 
@@ -304,18 +306,23 @@ All added or modified code must have Doxygen documentation matching the existing
 
 ## Definition of Done
 Before reporting completion, verify ALL:
-1. `make -C tests DEBUG=2` exits 0
-2. `make -C examples runall` exits 0
-3. `make -C libhifir test` exits 0
+1. `cmake --preset asan && cmake --build --preset asan && ctest --preset asan` exits 0
+2. `cmake --preset release && cmake --build --preset release` exits 0 (examples + libhifir build)
+3. `ctest --preset release --label-regex 'c'` exits 0 (libhifir C tests)
 4. `clang-format --dry-run --Werror --style=file <changed-files>` exits 0
+5. `git diff src/` is empty (no C++ source changes during build-system work)
 
 ## Gotchas
-1. **GTest auto-detection is fragile**: The `tests/Makefile` searches `/opt/local` and `$HOME/.local` for GTest. If not found, set `GTEST_HOME` manually (e.g., `GTEST_HOME=/path/to/gtest`).
-2. **GTest must be C++11-compatible**: HIFIR enforces `-std=c++11`, but GTest ≥1.12 requires C++14, and GTest ≥1.13 requires C++17. You MUST use GTest ≤1.11.x (or build an older release from source). `sudo apt install libgtest-dev` may install an incompatible modern version — always verify with `grep GTEST_LANG_CXX11 /path/to/gtest/gtest.h`.
-3. **DEBUG=2 enables address sanitizer** which can conflict with other sanitizers or ASLR. If tests crash with ASan errors, try `DEBUG=1` instead.
-4. **`-rdynamic` linker flag is required** for stack trace output via `hif::print_backtrace()` — do not remove it.
-5. **`Makefile.in` is a shared fragment**, not a standalone Makefile. It is `include`d by `tests/Makefile`, `examples/Makefile`, and has no top-level target itself.
+1. **CMake 3.24+ required**: `FIND_PACKAGE_ARGS` in FetchContent needs CMake 3.24+. Ubuntu 22.04 ships 3.22 — install from Kitware PPA (`sudo apt install --no-install-recommends cmake`) or use `pip install cmake`.
+2. **GTest is fetched via FetchContent** (v1.17.0, pinned). If system GTest is old (≤1.11, C++11), use `-DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE` to force download of v1.17.0.
+3. **ASan is enabled via `cmake --preset asan`** (sets `HIFIR_ENABLE_ASAN=ON`). Use `ASAN_OPTIONS=detect_leaks=0` to avoid OpenMP false-positive leak reports.
+4. **`-rdynamic` linker flag is required** for stack trace output via `hif::print_backtrace()` — applied automatically via `target_link_options` on Linux (`if(UNIX AND NOT APPLE)` guard).
+5. **CMakePresets.json uses separate binary dirs** per preset (`build-release`, `build-debug`, `build-asan`) to avoid cache conflicts between build types.
 6. **libhifir builds two binaries from one `.cpp`**: `libhifir_i32` and `libhifir_i64` are the same source compiled with different `-DLIBHIFIR_INT_SIZE` values. Both must build successfully.
+7. **`-ffast-math` cannot be PRIVATE on INTERFACE library**: INTERFACE libraries have no compile step; put `-ffast-math` on compiled targets only (SHARED, STATIC, EXECUTABLE) via `$<$<CONFIG:Release>:-ffast-math>`.
+8. **`file(GLOB ...)` requires `CONFIGURE_DEPENDS` before `RELATIVE`**: CMake syntax requires keywords before path options — write `file(GLOB VAR CONFIGURE_DEPENDS RELATIVE ${dir} "pattern")`.
+9. **`enable_testing()` must be at top-level**: Placing it in a subdirectory's CMakeLists.txt doesn't register tests from that subdirectory with CTest.
+10. **`find_dependency` requires `CMakeFindDependencyMacro`** (not `CMakeFindDependencyFramework`, which doesn't exist). The `@PACKAGE_INIT@` macro includes it automatically in config-file templates.
 
 ### Recording Lessons Learned
 

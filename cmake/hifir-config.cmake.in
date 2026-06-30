@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(LAPACK REQUIRED)
+if("@HIFIR_USE_OPENMP@")
+    find_dependency(OpenMP REQUIRED COMPONENTS CXX)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/hifir-targets.cmake")
+check_required_components(hifir)

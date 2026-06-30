@@ -4,33 +4,34 @@
 
 ## Installation ##
 
-After obtaining the C++ interface, one can build and install the C library `libhifir`. First, navigate to the subfolder libhifir
+`libhifir` builds as part of the default CMake build. From the project root:
 
 ```console
-cd libhifir
+cmake --preset release
+cmake --build --preset release
 ```
 
-Then, compile and install the package using the following commands:
+This builds both 32-bit-integer and 64-bit-integer variants (`libhifir_i32` and `libhifir_i64`). To install:
 
 ```console
-make -j
-make PREFIX=/path/to/destination install
+cmake --install build-release --prefix /path/to/destination
 ```
 
-For a quick check, you may also want to run `make test` before `make install` or `make PREFIX=/path/to/destination test` after install.
-
-The `-j` options allows building both 32-bit-integer
-and 64-bit-integer versions at the same time. By default, `PREFIX=/usr/local`. In addition, set the `LAPACK_LIBS` variable if you have customized installation of LAPACK, such as
+By default, `PREFIX=/usr/local`. For a quick check, run the C tests:
 
 ```console
-make LAPACK_LIBS="-L/path/to/openblas/lib -lopenblas" -j
+ctest --preset release --label-regex 'c'
 ```
 
-which is also preferable to set `LDFLAGS=-Wl,-rpath,/path/to/openblas/lib`. Note that `LAPACK_LIBS="-llapack -lblas"` by default.
-Note that HIFIR uses OpenMP for computing the Schur complement. You can
-disable OpenMP by setting `USE_OPENMP=0`, i.e., `make USE_OPENMP=0 -j`.
+If you have a customized LAPACK installation, set `BLA_VENDOR` or `LAPACK_LIBRARIES`:
 
-Note that to install to a system directory, you may need to add `sudo` in front of the `make install` command.
+```console
+cmake --preset release -DBLA_VENDOR=OpenBLAS
+```
+
+Note that HIFIR uses OpenMP for computing the Schur complement. You can disable OpenMP with `-DHIFIR_USE_OPENMP=OFF`.
+
+Note that to install to a system directory, you may need to add `sudo` in front of the `cmake --install` command.
 
 Once the installation is complete, we will have
 
@@ -45,6 +46,15 @@ cc -DLIBHIFIR_INT_SIZE=64 my_prog.c -lhifir_i64
 ```
 
 Note that by default, `libhifir` uses 64-bit integer for `ind_start` array in HIF and sparse matrices for both 32-bit and 64-bit integer builds. In other words, 32-bit and 64-bit integer builds only affect the index array in sparse matrices and HIF preconditioners. To use 32-bit `ind_start` array, one needs to build `libhifir` and compile his/her programs with macro `-DLIBHIF_INDPTR_SIZE=32`.
+
+## Downstream Integration ##
+
+For CMake-based downstream projects, use `find_package(hifir REQUIRED)` and link against the imported targets:
+
+```cmake
+find_package(hifir REQUIRED)
+target_link_libraries(my_app PRIVATE hifir::hifir_i32)  # or hifir::hifir_i64
+```
 
 ## Examples ##
 

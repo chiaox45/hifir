@@ -24,10 +24,13 @@ rules:
     - All output goes to discover.md (no docs/superpowers/ or .sisyphus/)
   plan:
     - Micro-steps must be 2-5 minutes each (one action per step)
-    - No placeholders, i.e., ban "TBD", "add error handling", "similar to Task N"
+    - No placeholders, i.e. ban "TBD", "add error handling", "similar to Task N"
     - Test mock paths must match implementation import style (lazy import → patch source module)
     - Include relevant design tables (e.g., pool classification) directly in task briefs
     - Momus review is mandatory after drafting
+    - Verify FetchContent URL_HASH with `curl -sL <url> | sha256sum` before putting in plan
+    - CMake `file(GLOB ...)` syntax: `CONFIGURE_DEPENDS` must come before `RELATIVE`
+    - `enable_testing()` must be at top-level CMakeLists.txt, not in subdirectories
   retrospective:
     - Updating AGENTS.md, README.md, and openspec/config.yaml based on §6 Promote Candidates is MANDATORY — do not skip documentation updates
     - Each §6 candidate targeting a documentation file must be applied and checked off (`- [x]`) before the retrospective is considered complete
