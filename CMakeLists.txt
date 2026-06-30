@@ -101,3 +101,54 @@ endif()
 if(HIFIR_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
+# ---------------------------------------------------------------------------
+# Install rules and package config
+# ---------------------------------------------------------------------------
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+# Install headers (src/ tree -> include/)
+install(DIRECTORY src/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h")
+
+# Install libhifir C header (from libhifir/include/)
+install(FILES libhifir/include/libhifir.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# Install hifir INTERFACE target (always -- header-only library)
+install(TARGETS hifir EXPORT hifir-targets)
+
+# Install libhifir targets (conditional on HIFIR_BUILD_C_LIB)
+if(HIFIR_BUILD_C_LIB)
+    install(TARGETS hifir_i32_shared hifir_i64_shared hifir_i32_static hifir_i64_static
+        EXPORT hifir-targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+endif()
+
+# Install export set
+install(EXPORT hifir-targets NAMESPACE hifir::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hifir
+)
+
+# Generate and install config files
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/hifir-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/hifir-config.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hifir
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/hifir-config-version.cmake
+    VERSION ${HIFIR_VERSION}
+    COMPATIBILITY SameMinorVersion
+    ARCH_INDEPENDENT
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/hifir-config.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/hifir-config-version.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/hifir
+)
+
