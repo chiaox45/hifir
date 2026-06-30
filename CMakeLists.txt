@@ -26,3 +26,43 @@ endif()
 
 # Standardize on -fPIC for all targets
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# ---------------------------------------------------------------------------
+# Build options
+# ---------------------------------------------------------------------------
+option(HIFIR_USE_OPENMP "Enable OpenMP support" ON)
+option(HIFIR_BUILD_TESTS "Build C++ unit tests" ON)
+option(HIFIR_BUILD_EXAMPLES "Build example programs" ON)
+option(HIFIR_BUILD_C_LIB "Build libhifir C library" ON)
+option(HIFIR_ENABLE_ASAN "Enable AddressSanitizer" OFF)
+
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+# Allow user to select LAPACK vendor (e.g. OpenBLAS, MKL, Accelerate)
+if(NOT BLA_VENDOR)
+    set(BLA_VENDOR "All" CACHE STRING "LAPACK vendor selection")
+endif()
+find_package(LAPACK REQUIRED)
+message(STATUS "LAPACK found: ${LAPACK_LIBRARIES}")
+
+if(HIFIR_USE_OPENMP)
+    find_package(OpenMP REQUIRED COMPONENTS CXX)
+    message(STATUS "OpenMP found: ${OpenMP_CXX_VERSION}")
+endif()
+
+# ---------------------------------------------------------------------------
+# Header-only INTERFACE library
+# ---------------------------------------------------------------------------
+add_library(hifir INTERFACE)
+target_include_directories(hifir INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
+)
+target_compile_features(hifir INTERFACE cxx_std_17)
+target_link_libraries(hifir INTERFACE LAPACK::LAPACK)
+if(HIFIR_USE_OPENMP)
+    target_link_libraries(hifir INTERFACE OpenMP::OpenMP_CXX)
+endif()
+# ALIAS target for build-tree usage (matches installed namespace)
+add_library(hifir::hifir ALIAS hifir)
