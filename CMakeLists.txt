@@ -84,3 +84,13 @@ endif()
 if(HIFIR_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
+
+# ---------------------------------------------------------------------------
+# libhifir C library
+# ---------------------------------------------------------------------------
+if(HIFIR_BUILD_C_LIB)
+    add_subdirectory(libhifir)
+    if(HIFIR_BUILD_TESTS)
+        add_subdirectory(libhifir/tests)
+    endif()
+endif()
