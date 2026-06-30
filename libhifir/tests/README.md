@@ -4,14 +4,25 @@ This directory contains some simple examples/tests of using the C library `libhi
 
 ## Compilation ##
 
-Type `make` to compile all examples into executables. If your installation of `libhifir` is not standard, then pass in the path variable `PREFIX` during compilation, i.e.,
+The C tests build as part of the default CMake build when `HIFIR_BUILD_C_LIB=ON` and `HIFIR_BUILD_TESTS=ON`:
 
 ```console
-make PREFIX=/path/to/libhifir
+cmake --preset debug
+cmake --build --preset debug
 ```
 
-Note that if `PREFIX` is specified, then we assume  that `libhifir.h` and `libhifir.so` locate at `PREFIX/include` and `PREFIX/lib`, respectively.
+To run only the C tests:
+
+```console
+ctest --preset debug --label-regex 'c'
+```
+
+If your installation of `libhifir` is not standard, set `CMAKE_PREFIX_PATH` to the install prefix:
+
+```console
+cmake -DCMAKE_PREFIX_PATH=/path/to/libhifir-install ...
+```
 
 ## Running Examples/Tests ##
 
-Simply execute the compiled programs to run different examples/tests.
+Simply execute the compiled programs or use `ctest --label-regex 'c'` to run all C tests.
