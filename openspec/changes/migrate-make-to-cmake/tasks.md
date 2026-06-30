@@ -68,9 +68,9 @@
 
 ## 8. Doxygen Integration
 
-- [ ] 8.1 Create `docs/doxygen/Doxyfile.in` template with `@CMAKE_SOURCE_DIR@` substitution variables (spec: cmake-build-system/Doxygen, design: D10)
-- [ ] 8.2 Add `configure_file(Doxyfile.in Doxyfile @ONLY)` and `add_custom_target(doxygen COMMAND doxygen ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/doxygen)` (spec: cmake-build-system/Doxygen, design: D10)
-- [ ] 8.3 **TDD GATE**: `cmake --build build --target doxygen` generates `docs/html/index.html`
+- [~] 8.1 Create `docs/doxygen/Doxyfile.in` template with `@CMAKE_SOURCE_DIR@` substitution variables (spec: cmake-build-system/Doxygen, design: D10)
+- [~] 8.2 Add `configure_file(Doxyfile.in Doxyfile @ONLY)` and `add_custom_target(doxygen COMMAND doxygen ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs/doxygen)` (spec: cmake-build-system/Doxygen, design: D10)
+- [~] 8.3 **TDD GATE**: `cmake --build build --target doxygen` generates `docs/html/index.html`
 
 ## 9. CI Pipeline Rewrite
 
@@ -97,7 +97,7 @@
 
 ## 11. Remove Makefiles and Clean Up
 
-- [ ] 11.1 Remove `Makefile.in`, `tests/Makefile`, `examples/Makefile`, `libhifir/Makefile`, `libhifir/tests/Makefile`, `docs/doxygen/Makefile` (spec: cmake-build-system, design: full replace)
-- [ ] 11.2 Clean `.gitignore`: remove stale `hilucsi`/`psmilu` entries, ensure `build/` is ignored (spec: cmake-build-system, design: gotcha #10)
-- [ ] 11.3 Verify `HIF_THROW` is NOT globally defined by CMake — source-level `#define` in `libhifir/src/libhifir.cpp:35-37` preserved (spec: cmake-build-system/HIF_THROW Preservation, design: MR-B7)
-- [ ] 11.4 **TDD GATE (FINAL DoD)**: `cmake --preset release && cmake --build --preset release && ctest --preset release` exits 0; libhifir i32+i64 (static+shared) build; C tests pass; all 12 examples build; `git diff src/` is empty (no C++ source changes); `grep -r "make -C" *.md **/*.md` returns no matches
+- [x] 11.1 Remove `Makefile.in`, `tests/Makefile`, `examples/Makefile`, `libhifir/Makefile`, `libhifir/tests/Makefile`, `docs/doxygen/Makefile` (spec: cmake-build-system, design: full replace)
+- [x] 11.2 Clean `.gitignore`: remove stale `hilucsi`/`psmilu` entries, ensure `build/` is ignored (spec: cmake-build-system, design: gotcha #10)
+- [x] 11.3 Verify `HIF_THROW` is NOT globally defined by CMake — source-level `#define` in `libhifir/src/libhifir.cpp:35-37` preserved (spec: cmake-build-system/HIF_THROW Preservation, design: MR-B7)
+- [x] 11.4 **TDD GATE (FINAL DoD)**: `cmake --preset release && cmake --build --preset release && ctest --preset release` exits 0; libhifir i32+i64 (static+shared) build; C tests pass; all 12 examples build; `git diff src/` is empty (no C++ source changes); `grep -r "make -C" *.md **/*.md` returns no matches
