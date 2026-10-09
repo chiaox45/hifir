@@ -51,3 +51,4 @@ tests/*.mm
 .opencode/package-lock.json
 .sisyphus/
 .memsearch/
+bench-artifacts/

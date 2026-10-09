@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""idd-hash — idd-body-v1 normalization and SHA-256 for Issue-first chiao-idd.
+
+The canonical idd-body-v1 rule is defined in chiao-idd-start prose; this
+script is its tested implementation. Rule: strict UTF-8 decode, CRLF
+converted to LF, trailing spaces and tabs removed from each line, and
+exactly one final LF (trailing blank lines collapse to that single final
+LF). A lone CR is not a line ending and is left in place.
+
+Usage:
+  idd-hash BODY_FILE            print the normalized body's SHA-256
+  idd-hash --normalized FILE    print the normalized body itself
+  idd-hash -                    read the body from stdin
+  idd-hash --self-test          run the embedded tests
+
+Exit codes: 0 ok, 1 usage or IO error.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import sys
+
+
+def normalize(body: str) -> str:
+    lines = body.replace("\r\n", "\n").split("\n")
+    stripped = [line.rstrip(" \t") for line in lines]
+    return "\n".join(stripped).rstrip("\n") + "\n"
+
+
+def sha256_of(normalized: str) -> str:
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def read_body(path: str) -> str:
+    if path == "-":
+        raw = sys.stdin.buffer.read()
+    else:
+        with open(path, "rb") as handle:
+            raw = handle.read()
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(f"body is not valid UTF-8: {exc}") from exc
+
+
+def run_self_tests() -> int:
+    cases: list[tuple[str, str, str]] = [
+        ("plain", "hello", "hello\n"),
+        ("crlf to lf", "a\r\nb\r\n", "a\nb\n"),
+        ("trailing spaces and tabs", "a \t\nb\t\t\n", "a\nb\n"),
+        ("trailing blank lines collapse", "a\n\n\n", "a\n"),
+        ("interior blank line kept", "a\n\nb\n", "a\n\nb\n"),
+        ("no final lf", "a", "a\n"),
+        ("empty body", "", "\n"),
+        ("whitespace-only body", "  \t\n", "\n"),
+        ("lone cr kept", "a\rb\n", "a\rb\n"),
+        ("unicode", "héllo — ünïcode\n", "héllo — ünïcode\n"),
+    ]
+    for name, source, want in cases:
+        got = normalize(source)
+        assert got == want, f"{name}: {got!r} != {want!r}"
+    assert sha256_of(normalize("x \r\n")) == sha256_of(normalize("x\n"))
+    assert sha256_of(normalize("x\n")) != sha256_of(normalize("y\n"))
+    print(f"idd-hash: {len(cases)} normalization cases + 2 hash checks OK")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="idd-hash",
+        description="Normalize an IDD body by idd-body-v1 and print its SHA-256.",
+    )
+    parser.add_argument("body", nargs="?", help="body file, or - for stdin")
+    parser.add_argument(
+        "--normalized",
+        action="store_true",
+        help="print the normalized body instead of its SHA-256",
+    )
+    parser.add_argument("--self-test", action="store_true", help="run embedded tests")
+    args = parser.parse_args(argv)
+    if args.self_test:
+        return run_self_tests()
+    if not args.body:
+        parser.error("BODY_FILE is required unless --self-test")
+    try:
+        normalized = normalize(read_body(args.body))
+    except (OSError, ValueError) as exc:
+        print(f"idd-hash: {exc}", file=sys.stderr)
+        return 1
+    if args.normalized:
+        sys.stdout.write(normalized)
+    else:
+        print(sha256_of(normalized))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

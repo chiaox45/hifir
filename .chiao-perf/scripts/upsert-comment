@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""upsert-comment — create or edit one marked comment on a GitHub issue.
+
+Finds the unique issue comment whose body contains MARKER on its own full
+line (modulo surrounding whitespace): exactly one match is edited in place,
+zero matches create a new comment, and two or more matches are ambiguous
+drift and are refused. A marker quoted mid-prose never matches, so human
+prose mentioning a marker is never mistaken for a record. All GitHub access
+goes through the gh CLI.
+
+Usage:
+  upsert-comment --repo OWNER/REPO --issue 143 \
+      --marker chiao-idd:verification:v1 --body-file ledger.md
+  upsert-comment --repo O/R --issue 1 --marker m --dry-run
+
+Exit codes: 0 ok, 1 usage or IO error, 2 ambiguous marker (multiple existing
+comments match), 3 gh CLI failure.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+
+
+class GhError(RuntimeError):
+    pass
+
+
+def find_marker_comments(
+    comments: list[dict[str, object]], marker: str
+) -> list[dict[str, object]]:
+    hits: list[dict[str, object]] = []
+    pattern = re.compile(r"<!--\s*" + re.escape(marker) + r"\s*-->")
+    for comment in comments:
+        body = str(comment.get("body") or "")
+        if any(pattern.fullmatch(line.strip()) for line in body.split("\n")):
+            hits.append(comment)
+    return hits
+
+
+def load_json_stream(text: str) -> list[dict[str, object]]:
+    decoder = json.JSONDecoder()
+    index, length, items = 0, len(text), []
+    while index < length:
+        while index < length and text[index] in " \t\r\n":
+            index += 1
+        if index >= length:
+            break
+        obj, index = decoder.raw_decode(text, index)
+        if isinstance(obj, list):
+            items.extend(obj)
+        else:
+            items.append(obj)
+    return [item for item in items if isinstance(item, dict)]
+
+
+def gh_run(args_list: list[str], payload: str | None = None) -> str:
+    try:
+        proc = subprocess.run(
+            ["gh", *args_list],
+            input=payload,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise GhError("gh CLI not found on PATH") from exc
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip()
+        raise GhError(f"gh {' '.join(args_list)} failed: {detail}")
+    return proc.stdout or ""
+
+
+def list_comments(repo: str, issue: int) -> list[dict[str, object]]:
+    out = gh_run(["api", f"repos/{repo}/issues/{issue}/comments", "--paginate"])
+    return load_json_stream(out)
+
+
+def _as_comment_object(text: str) -> dict[str, object]:
+    parsed = json.loads(text)
+    if not isinstance(parsed, dict):
+        raise GhError("gh returned an unexpected payload shape")
+    return parsed
+
+
+def edit_comment(repo: str, comment_id: int, body: str) -> dict[str, object]:
+    url = f"repos/{repo}/issues/comments/{comment_id}"
+    out = gh_run(["api", "--method", "PATCH", url, "--input", "-"], json.dumps({"body": body}))
+    return _as_comment_object(out)
+
+
+def create_comment(repo: str, issue: int, body: str) -> dict[str, object]:
+    url = f"repos/{repo}/issues/{issue}/comments"
+    out = gh_run(["api", "--method", "POST", url, "--input", "-"], json.dumps({"body": body}))
+    return _as_comment_object(out)
+
+
+def read_body(path: str) -> str:
+    if path == "-":
+        raw = sys.stdin.buffer.read()
+    else:
+        with open(path, "rb") as handle:
+            raw = handle.read()
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(f"body is not valid UTF-8: {exc}") from exc
+
+
+def run_self_tests() -> int:
+    comments = [
+        {"id": 11, "body": "<!-- chiao-idd:verification:v1 -->\nsummary: ledger"},
+        {"id": 12, "body": "unrelated prose"},
+        {"id": 13, "body": ""},
+        {"id": 16, "body": "why is chiao-idd:verification:v1 used here?"},
+        {"id": 17, "body": "see <!-- chiao-idd:verification:v1 --> in the ledger comment"},
+    ]
+    hits = find_marker_comments(comments, "chiao-idd:verification:v1")
+    assert [h["id"] for h in hits] == [11]
+    assert find_marker_comments([], "chiao-idd:verification:v1") == []
+    assert find_marker_comments([{"id": 14}], "chiao-idd:verification:v1") == []
+    assert find_marker_comments([{"id": 18, "body": "<!-- other:marker -->"}], "chiao-idd:verification:v1") == []
+    assert find_marker_comments([{"id": 19, "body": "  <!-- chiao-idd:verification:v1 -->  "}], "chiao-idd:verification:v1")[0]["id"] == 19
+    ambiguous = comments + [{"id": 15, "body": "<!-- chiao-idd:verification:v1 -->"}]
+    assert len(find_marker_comments(ambiguous, "chiao-idd:verification:v1")) == 2
+    stream = load_json_stream('[{"id": 1}] [{"id": 2}]')
+    assert [c["id"] for c in stream] == [1, 2]
+    assert load_json_stream("") == []
+    print("upsert-comment: full-line marker scan, prose-mention rejection, empty, ambiguity, and json-stream cases OK")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="upsert-comment",
+        description="Create or edit one marked comment on a GitHub issue.",
+    )
+    parser.add_argument("--repo", help="OWNER/REPO")
+    parser.add_argument("--issue", type=int, help="issue number")
+    parser.add_argument("--marker", help="marker string to match")
+    parser.add_argument("--body-file", help="new comment body file, or - for stdin")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="report the plan without writing"
+    )
+    parser.add_argument("--self-test", action="store_true", help="run embedded tests")
+    args = parser.parse_args(argv)
+    if args.self_test:
+        return run_self_tests()
+    if not (args.repo and args.issue and args.marker):
+        parser.error("--repo, --issue, and --marker are required")
+    if not args.body_file and not args.dry_run:
+        parser.error("--body-file is required unless --dry-run or --self-test")
+    try:
+        comments = list_comments(args.repo, args.issue)
+    except GhError as exc:
+        print(f"upsert-comment: {exc}", file=sys.stderr)
+        return 3
+    hits = find_marker_comments(comments, args.marker)
+    if len(hits) > 1:
+        ids = ", ".join(str(hit.get("id")) for hit in hits)
+        print(
+            f"upsert-comment: ambiguous marker {args.marker!r}: "
+            f"matching comments {ids}",
+            file=sys.stderr,
+        )
+        return 2
+    if args.dry_run:
+        if hits:
+            first = hits[0]
+            print(f"would edit comment {first.get('id')} ({first.get('html_url')})")
+        else:
+            print("would create a new comment")
+        return 0
+    try:
+        body = read_body(args.body_file)
+    except (OSError, ValueError) as exc:
+        print(f"upsert-comment: {exc}", file=sys.stderr)
+        return 1
+    if hits:
+        target_id = hits[0].get("id")
+        if not isinstance(target_id, int):
+            print("upsert-comment: matched comment has no usable id", file=sys.stderr)
+            return 1
+        try:
+            comment = edit_comment(args.repo, target_id, body)
+            action = "edited"
+        except (GhError, json.JSONDecodeError) as exc:
+            print(f"upsert-comment: {exc}", file=sys.stderr)
+            return 3
+    else:
+        try:
+            comment = create_comment(args.repo, args.issue, body)
+            action = "created"
+        except (GhError, json.JSONDecodeError) as exc:
+            print(f"upsert-comment: {exc}", file=sys.stderr)
+            return 3
+    result = {
+        "action": action,
+        "comment_id": comment.get("id"),
+        "url": comment.get("html_url"),
+    }
+    print(json.dumps(result))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

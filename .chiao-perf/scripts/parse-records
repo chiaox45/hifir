@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+"""parse-records — extract marked chiao-idd and chiao-perf workflow records
+from GitHub comments.
+
+Input: the JSON output of "gh api repos/OWNER/REPO/issues/N/comments
+--paginate" on stdin. Output: one JSON array entry per recognized record:
+
+  {"type", "marker", "comment_id", "author", "created_at", "updated_at",
+   "html_url", "edited", "fields": {...}}
+
+A record starts at a line that is exactly one of the known markers in
+HTML-comment form, modulo surrounding whitespace (for example
+<!-- chiao-idd:freeze-record:v1 --> or
+<!-- chiao-perf:experiment-register:v1 -->). The known markers are the
+chiao-idd family (freeze-record, contract, verification) and the
+chiao-perf family (freeze-record, round-record, experiment-register,
+experiment-result, verification); both families parse with identical
+semantics, and the chiao-perf types carry a perf- prefix (for example
+perf-freeze-record) so a --type filter never conflates the two suites.
+A record's fields are the contiguous "key: value" lines
+immediately after the marker
+line; any other line, including a blank line, ends the field block. Only the
+first colon in a line splits, so values may contain colons. Comment prose
+outside a record is untrusted data and is never parsed. "edited" is true when
+updated_at differs from created_at — the caller MUST treat an edited
+signature record as invalid, because signature records are append-only. This
+script only parses; record validity (authorized actors, revisions) is judged
+by the caller.
+
+Usage:
+  gh api repos/O/R/issues/N/comments --paginate | parse-records
+  parse-records --type contract < comments.json
+  parse-records --type perf-round-record < comments.json
+  parse-records --self-test
+
+Exit codes: 0 ok, 1 usage or IO error.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from typing import TypedDict
+
+MARKER_TYPES = {
+    "chiao-idd:freeze-record:v1": "freeze-record",
+    "chiao-idd:contract:v1": "contract",
+    "chiao-idd:verification:v1": "verification",
+    "chiao-perf:freeze-record:v1": "perf-freeze-record",
+    "chiao-perf:round-record:v1": "perf-round-record",
+    "chiao-perf:experiment-register:v1": "perf-experiment-register",
+    "chiao-perf:experiment-result:v1": "perf-experiment-result",
+    "chiao-perf:verification:v1": "perf-verification",
+}
+MARKER_RES = {
+    marker: re.compile(r"<!--\s*" + re.escape(marker) + r"\s*-->")
+    for marker in MARKER_TYPES
+}
+FIELD_RE = re.compile(r"^([A-Za-z][A-Za-z0-9_-]*):[ \t]?(.*)$")
+
+
+class ParsedRecord(TypedDict):
+    marker: str
+    type: str
+    fields: dict[str, str]
+
+
+class Record(TypedDict):
+    type: str
+    marker: str
+    comment_id: object | None
+    author: object | None
+    created_at: object | None
+    updated_at: object | None
+    html_url: object | None
+    edited: bool
+    fields: dict[str, str]
+
+
+def parse_body(body: str) -> list[ParsedRecord]:
+    records: list[ParsedRecord] = []
+    current: ParsedRecord | None = None
+    for line in body.split("\n"):
+        hit = next(
+            (m for m, r in MARKER_RES.items() if r.fullmatch(line.strip())), None
+        )
+        if hit is not None:
+            if current is not None:
+                records.append(current)
+            current = {"marker": hit, "type": MARKER_TYPES[hit], "fields": {}}
+            continue
+        if current is None:
+            continue
+        field = FIELD_RE.match(line)
+        if field is None:
+            records.append(current)
+            current = None
+        else:
+            current["fields"][field.group(1)] = field.group(2)
+    if current is not None:
+        records.append(current)
+    return records
+
+
+def parse_comments(comments: list[dict[str, object]]) -> list[Record]:
+    records: list[Record] = []
+    for comment in comments:
+        body = str(comment.get("body") or "")
+        user_obj = comment.get("user")
+        author = user_obj.get("login") if isinstance(user_obj, dict) else None
+        created_at = comment.get("created_at")
+        updated_at = comment.get("updated_at")
+        edited = (
+            updated_at is not None
+            and created_at is not None
+            and updated_at != created_at
+        )
+        for parsed in parse_body(body):
+            records.append(
+                {
+                    "type": parsed["type"],
+                    "marker": parsed["marker"],
+                    "comment_id": comment.get("id"),
+                    "author": author,
+                    "created_at": created_at,
+                    "updated_at": updated_at,
+                    "html_url": comment.get("html_url"),
+                    "edited": edited,
+                    "fields": parsed["fields"],
+                }
+            )
+    return records
+
+
+def filter_records(records: list[Record], rtype: str) -> list[Record]:
+    return [record for record in records if record.get("type") == rtype]
+
+
+def load_json_stream(text: str) -> list[dict[str, object]]:
+    decoder = json.JSONDecoder()
+    index, length, items = 0, len(text), []
+    while index < length:
+        while index < length and text[index] in " \t\r\n":
+            index += 1
+        if index >= length:
+            break
+        obj, index = decoder.raw_decode(text, index)
+        if isinstance(obj, list):
+            items.extend(obj)
+        else:
+            items.append(obj)
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError("comments input must contain JSON objects")
+    return items
+
+
+def run_self_tests() -> int:
+    freeze_comment = {
+        "id": 2,
+        "user": {"login": "bob"},
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "html_url": "https://example/c2",
+        "body": (
+            "preamble prose\n"
+            "<!-- chiao-idd:freeze-record:v1 -->\n"
+            "record-revision: 1\n"
+            "normalization: idd-body-v1\n"
+            "body-sha256: abc123\n"
+            "base-revision: def456\n"
+            "arch-review: https://github.com/o/r/issues/9#issuecomment-1\n"
+            "accepted-by: alice\n"
+            "\n"
+            "post-prose is ignored"
+        ),
+    }
+    contract_comment = {
+        "id": 3,
+        "user": {"login": "agent"},
+        "body": (
+            "<!-- chiao-idd:contract:v1 -->\n"
+            "record-revision: 1\n"
+            "normalization: idd-body-v1\n"
+            "body-sha256: ffe\n"
+            "approved-by: chiao\n"
+            "bare chiao-idd:contract:v1 text is not a marker"
+        ),
+    }
+    ledger_comment = {
+        "id": 4,
+        "user": {"login": "carol"},
+        "body": "<!-- chiao-idd:verification:v1 -->\nsummary: ledger\nchild-144: delivered",
+    }
+    prose_comment = {"id": 1, "user": {"login": "alice"}, "body": "No records."}
+    edited_comment = {
+        "id": 8,
+        "user": {"login": "bob"},
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-02T00:00:00Z",
+        "body": "<!-- chiao-idd:freeze-record:v1 -->\nrecord-revision: 1\nbody-sha256: rewritten",
+    }
+
+    records = parse_comments(
+        [prose_comment, freeze_comment, contract_comment, ledger_comment, edited_comment]
+    )
+    assert [r["type"] for r in records] == [
+        "freeze-record",
+        "contract",
+        "verification",
+        "freeze-record",
+    ]
+    freeze = records[0]
+    assert freeze["author"] == "bob" and freeze["comment_id"] == 2
+    assert freeze["fields"]["body-sha256"] == "abc123"
+    url = "https://github.com/o/r/issues/9#issuecomment-1"
+    assert freeze["fields"]["arch-review"] == url
+    assert freeze["fields"]["accepted-by"] == "alice"
+    assert records[1]["fields"]["approved-by"] == "chiao"
+    assert records[0]["edited"] is False
+    assert records[3]["edited"] is True
+    assert records[3]["fields"]["body-sha256"] == "rewritten"
+    assert parse_comments([{"id": 9, "body": "<!-- chiao-idd:contract:v1 -->\nx: 1"}])[0]["edited"] is False
+
+    two = {
+        "id": 5,
+        "user": {"login": "dave"},
+        "body": (
+            "<!-- chiao-idd:freeze-record:v1 -->\nrecord-revision: 1\n"
+            "<!-- chiao-idd:contract:v1 -->\nrecord-revision: 1"
+        ),
+    }
+    assert [r["type"] for r in parse_comments([two])] == ["freeze-record", "contract"]
+
+    malformed = parse_comments(
+        [{"id": 6, "body": "<!-- chiao-idd:contract:v1 -->\nnot a field\nbody-sha256: late"}]
+    )
+    assert malformed[0]["fields"] == {}
+
+    quoted = parse_comments(
+        [{"id": 7, "body": "see <!-- chiao-idd:contract:v1 --> above for the record"}]
+    )
+    assert quoted == []
+
+    assert [c["id"] for c in load_json_stream('[{"id": 1}]\n[{"id": 2}]')] == [1, 2]
+    assert load_json_stream("") == []
+    assert load_json_stream("[]") == []
+    assert load_json_stream('{"id": 7, "body": ""}')[0]["id"] == 7
+    assert [r["type"] for r in filter_records(records, "contract")] == ["contract"]
+
+    perf_register_comment = {
+        "id": 10,
+        "user": {"login": "agent"},
+        "created_at": "2026-02-01T00:00:00Z",
+        "updated_at": "2026-02-01T00:00:00Z",
+        "html_url": "https://example/c10",
+        "body": (
+            "campaign preamble\n"
+            "<!-- chiao-perf:experiment-register:v1 -->\n"
+            "experiment: E007\n"
+            "direction: D003\n"
+            "hypothesis: raising temporal reuse cuts DRAM traffic\n"
+            "prediction: traffic down >= 25%, latency down >= 10%\n"
+            "pre-revision: 9f8e7d6\n"
+            "\n"
+            "post-prose is ignored"
+        ),
+    }
+    perf_freeze_comment = {
+        "id": 11,
+        "user": {"login": "bob"},
+        "created_at": "2026-02-01T00:00:00Z",
+        "updated_at": "2026-02-01T00:00:00Z",
+        "body": (
+            "<!-- chiao-perf:freeze-record:v1 -->\n"
+            "record-revision: 1\n"
+            "normalization: idd-body-v1\n"
+            "body-sha256: perf123\n"
+            "accepted-by: chiao"
+        ),
+    }
+    perf_edited_comment = {
+        "id": 12,
+        "user": {"login": "bob"},
+        "created_at": "2026-02-01T00:00:00Z",
+        "updated_at": "2026-02-03T00:00:00Z",
+        "body": "<!-- chiao-perf:freeze-record:v1 -->\nrecord-revision: 1\nbody-sha256: rewritten",
+    }
+    perf_all = parse_comments(
+        [freeze_comment, perf_register_comment, perf_freeze_comment, perf_edited_comment]
+    )
+    assert [r["type"] for r in perf_all] == [
+        "freeze-record",
+        "perf-experiment-register",
+        "perf-freeze-record",
+        "perf-freeze-record",
+    ]
+    register = perf_all[1]
+    assert register["marker"] == "chiao-perf:experiment-register:v1"
+    assert register["author"] == "agent" and register["comment_id"] == 10
+    assert register["fields"]["experiment"] == "E007"
+    assert register["fields"]["direction"] == "D003"
+    assert register["fields"]["prediction"] == "traffic down >= 25%, latency down >= 10%"
+    assert register["edited"] is False
+    perf_freezes = filter_records(perf_all, "perf-freeze-record")
+    assert [r["comment_id"] for r in perf_freezes] == [11, 12]
+    assert perf_freezes[0]["fields"]["body-sha256"] == "perf123"
+    assert perf_freezes[0]["edited"] is False
+    assert perf_freezes[1]["edited"] is True
+    assert perf_freezes[1]["fields"]["body-sha256"] == "rewritten"
+    assert [r["type"] for r in filter_records(perf_all, "freeze-record")] == [
+        "freeze-record"
+    ]
+    print(
+        "parse-records: record extraction, field contiguity, multi-record, "
+        "malformed, marker-quoting, edited-record detection, json-stream, "
+        "filter, and chiao-perf marker cases OK"
+    )
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="parse-records",
+        description=(
+            "Extract marked chiao-idd and chiao-perf records from GitHub "
+            "issue comments."
+        ),
+    )
+    parser.add_argument(
+        "--type",
+        choices=sorted(set(MARKER_TYPES.values())),
+        help="keep only records of this type",
+    )
+    parser.add_argument("--self-test", action="store_true", help="run embedded tests")
+    args = parser.parse_args(argv)
+    if args.self_test:
+        return run_self_tests()
+    try:
+        comments = load_json_stream(sys.stdin.read())
+        records = parse_comments(comments)
+    except ValueError as exc:
+        print(f"parse-records: invalid input: {exc}", file=sys.stderr)
+        return 1
+    if args.type:
+        records = filter_records(records, args.type)
+    print(json.dumps(records, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
