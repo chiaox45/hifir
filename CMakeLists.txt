@@ -34,6 +34,7 @@ option(HIFIR_USE_OPENMP "Enable OpenMP support" ON)
 option(HIFIR_BUILD_TESTS "Build C++ unit tests" ON)
 option(HIFIR_BUILD_EXAMPLES "Build example programs" ON)
 option(HIFIR_BUILD_C_LIB "Build libhifir C library" ON)
+option(HIFIR_BUILD_BENCH "Build benchmark harness" ON)
 option(HIFIR_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
 # ---------------------------------------------------------------------------
@@ -100,6 +101,13 @@ endif()
 # ---------------------------------------------------------------------------
 if(HIFIR_BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+# ---------------------------------------------------------------------------
+# Benchmark harness
+# ---------------------------------------------------------------------------
+if(HIFIR_BUILD_BENCH)
+    add_subdirectory(bench)
 endif()
 
 # ---------------------------------------------------------------------------
